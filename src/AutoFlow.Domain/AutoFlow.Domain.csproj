@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>AutoFlow.Domain</RootNamespace>
+  </PropertyGroup>
+
+</Project>
