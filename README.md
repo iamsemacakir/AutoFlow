@@ -14,6 +14,7 @@ Early foundation. See [ROADMAP.md](ROADMAP.md) for what is done and what comes n
 | Area | State |
 | --- | --- |
 | Domain model: Customer, Vehicle (VIN, plate, mileage) | ✅ |
+| Application layer: use cases, repository contracts, result type | ✅ |
 | API host: health check, problem details, OpenAPI | ✅ |
 | Unit + integration tests, CI | ✅ |
 | Persistence (EF Core + PostgreSQL) | ⏳ planned |
@@ -40,10 +41,12 @@ Useful endpoints while running in Development:
 
 ```
 src/
-  AutoFlow.Domain/   entities, value objects, business rules (no dependencies)
-  AutoFlow.Api/      ASP.NET Core host, HTTP endpoints, error handling
+  AutoFlow.Domain/        entities, value objects, business rules (no dependencies)
+  AutoFlow.Application/   use cases, repository contracts, Result/Error
+  AutoFlow.Api/           ASP.NET Core host, HTTP endpoints, error handling
 tests/
-  AutoFlow.Domain.Tests/   unit tests for domain rules
+  AutoFlow.Domain.Tests/        unit tests for domain rules
+  AutoFlow.Application.Tests/   use-case tests against in-memory fakes
   AutoFlow.Api.Tests/      in-memory integration tests (WebApplicationFactory)
 docs/
   architecture.md    layers, dependency rules, conventions

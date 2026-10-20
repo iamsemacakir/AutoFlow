@@ -12,12 +12,12 @@ updated docs. Steps are done in order unless a dependency forces otherwise.
 - [x] GitHub Actions CI (restore, build, test)
 - [x] Architecture notes and ADR 0001
 
-## Milestone 1 — Application layer
+## Milestone 1 — Application layer ✅
 
-- [ ] `AutoFlow.Application` project: repository contracts (`ICustomerRepository`, `IVehicleRepository`), `IUnitOfWork`, `TimeProvider` usage
-- [ ] Use cases: register customer, update customer, register vehicle, record mileage, transfer vehicle
-- [ ] Result/error type for expected failures (not found, duplicate VIN)
-- [ ] Unit tests for use cases with in-memory fakes
+- [x] `AutoFlow.Application` project: repository contracts (`ICustomerRepository`, `IVehicleRepository`), `IUnitOfWork`, `TimeProvider` usage
+- [x] Use cases: register customer, update customer, register vehicle, record mileage, transfer vehicle
+- [x] Result/error type for expected failures (not found, duplicate VIN)
+- [x] Unit tests for use cases with in-memory fakes
 
 ## Milestone 2 — Persistence
 
