@@ -17,13 +17,15 @@ Early foundation. See [ROADMAP.md](ROADMAP.md) for what is done and what comes n
 | Application layer: use cases, repository contracts, result type | ✅ |
 | API host: health check, problem details, OpenAPI | ✅ |
 | Unit + integration tests, CI | ✅ |
-| Persistence (EF Core + PostgreSQL) | ⏳ planned |
+| Persistence: EF Core + PostgreSQL mappings, repositories | ✅ |
+| Database migrations, docker-compose | ⏳ next |
 | Work orders, appointments, invoices | ⏳ planned |
 | Auth, UI, deployment | ⏳ planned |
 
 ## Getting started
 
-Requirements: [.NET 10 SDK](https://dotnet.microsoft.com/download).
+Requirements: [.NET 10 SDK](https://dotnet.microsoft.com/download), and Docker
+for the infrastructure tests (they start a throw-away PostgreSQL container).
 
 ```bash
 dotnet restore
@@ -43,10 +45,12 @@ Useful endpoints while running in Development:
 src/
   AutoFlow.Domain/        entities, value objects, business rules (no dependencies)
   AutoFlow.Application/   use cases, repository contracts, Result/Error
+  AutoFlow.Infrastructure/ EF Core + PostgreSQL: DbContext, mappings, repositories
   AutoFlow.Api/           ASP.NET Core host, HTTP endpoints, error handling
 tests/
   AutoFlow.Domain.Tests/        unit tests for domain rules
   AutoFlow.Application.Tests/   use-case tests against in-memory fakes
+  AutoFlow.Infrastructure.Tests/ persistence tests against PostgreSQL (Testcontainers)
   AutoFlow.Api.Tests/      in-memory integration tests (WebApplicationFactory)
 docs/
   architecture.md    layers, dependency rules, conventions

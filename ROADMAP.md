@@ -21,13 +21,14 @@ updated docs. Steps are done in order unless a dependency forces otherwise.
 
 ## Milestone 2 — Persistence
 
-- [ ] `AutoFlow.Infrastructure` with EF Core + Npgsql
-- [ ] Entity configurations, value-object conversions, unique VIN index
+- [x] `AutoFlow.Infrastructure` with EF Core + Npgsql: `AutoFlowDbContext` as unit of work, repositories, `AddInfrastructure`
+- [x] Entity configurations, value-object conversions, unique VIN index, FK/check constraints, `xmin` concurrency token
 - [ ] Initial migration and `docker-compose.yml` for local PostgreSQL
-- [ ] Integration tests against PostgreSQL (Testcontainers) in CI
+- [x] Integration tests against PostgreSQL (Testcontainers) in CI
 
 ## Milestone 3 — Customer & vehicle endpoints
 
+- [ ] Map unique-violation and concurrency exceptions to 409 problem responses
 - [ ] `/api/customers` CRUD with paging and search
 - [ ] `/api/customers/{id}/vehicles`, `/api/vehicles/{id}` incl. mileage and transfer
 - [ ] Request validation and consistent problem responses

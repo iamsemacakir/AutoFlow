@@ -3,10 +3,12 @@
     <Project Path="src/AutoFlow.Api/AutoFlow.Api.csproj" />
     <Project Path="src/AutoFlow.Application/AutoFlow.Application.csproj" />
     <Project Path="src/AutoFlow.Domain/AutoFlow.Domain.csproj" />
+    <Project Path="src/AutoFlow.Infrastructure/AutoFlow.Infrastructure.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/AutoFlow.Api.Tests/AutoFlow.Api.Tests.csproj" />
     <Project Path="tests/AutoFlow.Application.Tests/AutoFlow.Application.Tests.csproj" />
     <Project Path="tests/AutoFlow.Domain.Tests/AutoFlow.Domain.Tests.csproj" />
+    <Project Path="tests/AutoFlow.Infrastructure.Tests/AutoFlow.Infrastructure.Tests.csproj" />
   </Folder>
 </Solution>
