@@ -1,0 +1,25 @@
+# Local development database. Start with `docker compose up -d`, then apply
+# the schema with `dotnet ef database update` (see README).
+# The credentials are for local use only and match
+# AutoFlowDbContextFactory.LocalConnectionString.
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: autoflow-postgres
+    environment:
+      POSTGRES_DB: autoflow
+      POSTGRES_USER: autoflow
+      POSTGRES_PASSWORD: autoflow
+    ports:
+      - "5432:5432"
+    volumes:
+      - autoflow-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U autoflow -d autoflow"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  autoflow-postgres-data:

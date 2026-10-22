@@ -19,11 +19,11 @@ updated docs. Steps are done in order unless a dependency forces otherwise.
 - [x] Result/error type for expected failures (not found, duplicate VIN)
 - [x] Unit tests for use cases with in-memory fakes
 
-## Milestone 2 — Persistence
+## Milestone 2 — Persistence ✅
 
 - [x] `AutoFlow.Infrastructure` with EF Core + Npgsql: `AutoFlowDbContext` as unit of work, repositories, `AddInfrastructure`
 - [x] Entity configurations, value-object conversions, unique VIN index, FK/check constraints, `xmin` concurrency token
-- [ ] Initial migration and `docker-compose.yml` for local PostgreSQL
+- [x] Initial migration and `docker-compose.yml` for local PostgreSQL
 - [x] Integration tests against PostgreSQL (Testcontainers) in CI
 
 ## Milestone 3 — Customer & vehicle endpoints

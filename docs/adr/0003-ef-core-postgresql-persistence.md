@@ -50,5 +50,5 @@ the same records, so lost updates must be detected.
   surface as 500s until the API maps them to 409 (Milestone 3).
 - Running the infrastructure tests requires Docker (available on GitHub
   Actions `ubuntu-latest`).
-- The schema is currently created with `EnsureCreated` in tests; the initial
-  migration and `docker-compose.yml` follow as the next roadmap step.
+- The schema was first created with `EnsureCreated` in tests; it is now
+  managed by migrations (ADR 0004).

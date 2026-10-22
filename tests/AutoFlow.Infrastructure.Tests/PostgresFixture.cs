@@ -6,8 +6,9 @@ namespace AutoFlow.Infrastructure.Tests;
 
 /// <summary>
 /// Starts one throw-away PostgreSQL container for the whole test run (Docker
-/// required) and creates the schema from the EF Core model. Tests isolate
-/// themselves by using fresh ids and VINs instead of truncating tables.
+/// required) and builds the schema by applying the EF Core migrations, so
+/// every test run also proves the migrations produce a working database.
+/// Tests isolate themselves by using fresh ids and VINs instead of truncating tables.
 /// </summary>
 public sealed class PostgresFixture : IAsyncLifetime
 {
@@ -26,7 +27,7 @@ public sealed class PostgresFixture : IAsyncLifetime
         await _container.StartAsync();
 
         await using var db = CreateContext();
-        await db.Database.EnsureCreatedAsync();
+        await db.Database.MigrateAsync();
     }
 
     public Task DisposeAsync() => _container.DisposeAsync().AsTask();

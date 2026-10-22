@@ -18,7 +18,8 @@ Early foundation. See [ROADMAP.md](ROADMAP.md) for what is done and what comes n
 | API host: health check, problem details, OpenAPI | ✅ |
 | Unit + integration tests, CI | ✅ |
 | Persistence: EF Core + PostgreSQL mappings, repositories | ✅ |
-| Database migrations, docker-compose | ⏳ next |
+| Database migrations, docker-compose for local PostgreSQL | ✅ |
+| Customer & vehicle HTTP endpoints | ⏳ next |
 | Work orders, appointments, invoices | ⏳ planned |
 | Auth, UI, deployment | ⏳ planned |
 
@@ -32,6 +33,27 @@ dotnet restore
 dotnet build
 dotnet test
 dotnet run --project src/AutoFlow.Api   # http://localhost:5080
+```
+
+### Local database
+
+`docker-compose.yml` starts PostgreSQL 17 on `localhost:5432`
+(database, user and password `autoflow`). The schema is managed by EF Core
+migrations; the `dotnet ef` tool is pinned in `.config/dotnet-tools.json`.
+
+```bash
+docker compose up -d               # start PostgreSQL
+dotnet tool restore                # installs dotnet-ef
+dotnet ef database update --project src/AutoFlow.Infrastructure
+```
+
+To target another database, set `AUTOFLOW_CONNECTION_STRING` before running
+`dotnet ef`. After changing a mapping, add a migration (the test suite fails
+until you do):
+
+```bash
+dotnet ef migrations add <Name> --project src/AutoFlow.Infrastructure \
+  --output-dir Persistence/Migrations
 ```
 
 Useful endpoints while running in Development:
@@ -52,6 +74,7 @@ tests/
   AutoFlow.Application.Tests/   use-case tests against in-memory fakes
   AutoFlow.Infrastructure.Tests/ persistence tests against PostgreSQL (Testcontainers)
   AutoFlow.Api.Tests/      in-memory integration tests (WebApplicationFactory)
+docker-compose.yml   local PostgreSQL for development
 docs/
   architecture.md    layers, dependency rules, conventions
   adr/               architecture decision records
