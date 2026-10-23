@@ -9,7 +9,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\AutoFlow.Domain\AutoFlow.Domain.csproj" />
+    <ProjectReference Include="..\AutoFlow.Application\AutoFlow.Application.csproj" />
+    <ProjectReference Include="..\AutoFlow.Infrastructure\AutoFlow.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="AutoFlow.Api.Tests" />
   </ItemGroup>
 
 </Project>

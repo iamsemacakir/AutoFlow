@@ -19,6 +19,7 @@ Early foundation. See [ROADMAP.md](ROADMAP.md) for what is done and what comes n
 | Unit + integration tests, CI | ✅ |
 | Persistence: EF Core + PostgreSQL mappings, repositories | ✅ |
 | Database migrations, docker-compose for local PostgreSQL | ✅ |
+| API composition, 409 for write conflicts | ✅ |
 | Customer & vehicle HTTP endpoints | ⏳ next |
 | Work orders, appointments, invoices | ⏳ planned |
 | Auth, UI, deployment | ⏳ planned |
@@ -47,8 +48,11 @@ dotnet tool restore                # installs dotnet-ef
 dotnet ef database update --project src/AutoFlow.Infrastructure
 ```
 
-To target another database, set `AUTOFLOW_CONNECTION_STRING` before running
-`dotnet ef`. After changing a mapping, add a migration (the test suite fails
+The API reads its connection string from `ConnectionStrings:AutoFlow`
+(`appsettings.Development.json` points at this database; elsewhere set the
+`ConnectionStrings__AutoFlow` environment variable — the API refuses to start
+without it). To target another database with `dotnet ef`, set
+`AUTOFLOW_CONNECTION_STRING`. After changing a mapping, add a migration (the test suite fails
 until you do):
 
 ```bash

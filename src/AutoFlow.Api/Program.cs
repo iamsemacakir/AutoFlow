@@ -1,10 +1,24 @@
 using AutoFlow.Api.Errors;
+using AutoFlow.Application;
+using AutoFlow.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
+
+var connectionString = builder.Configuration.GetConnectionString("AutoFlow");
+if (string.IsNullOrWhiteSpace(connectionString))
+{
+    throw new InvalidOperationException(
+        "Connection string 'AutoFlow' is not configured. Set ConnectionStrings__AutoFlow " +
+        "(appsettings.Development.json points at the docker-compose database).");
+}
+
+builder.Services.AddApplication();
+builder.Services.AddInfrastructure(connectionString);
 
 builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<DomainExceptionHandler>();
+builder.Services.AddExceptionHandler<ConflictExceptionHandler>();
 builder.Services.AddHealthChecks();
 
 var app = builder.Build();

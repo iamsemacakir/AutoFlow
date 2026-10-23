@@ -69,6 +69,11 @@ See [ADR 0003](adr/0003-ef-core-postgresql-persistence.md).
 **Api** — minimal-API endpoints, request/response contracts, error handling,
 authentication. Business rules do not live here.
 
+- `Program.cs` is the composition root: `AddApplication()` plus
+  `AddInfrastructure(ConnectionStrings:AutoFlow)`. A missing connection string
+  stops the host at startup instead of failing on the first request.
+  `appsettings.Development.json` points at the docker-compose database.
+
 ## Error handling
 
 Two kinds of failure, two mechanisms:
@@ -77,12 +82,26 @@ Two kinds of failure, two mechanisms:
 | --- | --- | --- | --- |
 | Expected outcome of a lookup or uniqueness check | unknown customer, duplicate VIN | `Result<T>` with `Error` | 404 / 409 |
 | Invalid input or broken business rule | malformed VIN, mileage going backwards | `DomainException` | 422 |
-| Lost race caught by the database | same VIN registered twice at once, concurrent edit | `DbUpdateException` / `DbUpdateConcurrencyException` | 500 (409 planned, M3) |
+| Lost race caught by the database | same VIN registered twice at once, concurrent edit | `UniqueConstraintViolationException` / `ConcurrencyConflictException` from `IUnitOfWork` | 409 |
 | Bug / infrastructure failure | null reference, DB down | any other exception | 500 |
 
 A `DomainException` signals a broken business rule. `DomainExceptionHandler`
-maps it to an RFC 9457 problem response with HTTP 422. Any other unhandled
-exception becomes a generic 500 problem response without leaking details.
+maps it to an RFC 9457 problem response with HTTP 422.
+
+Use cases check uniqueness before writing, but two requests can pass that
+check at the same moment, and an aggregate can be edited by two requests at
+once (`xmin` concurrency token). `AutoFlowDbContext`, as the `IUnitOfWork`,
+translates exactly these two database outcomes into the application-level
+`UniqueConstraintViolationException` and `ConcurrencyConflictException`, so
+no layer above it knows EF Core or PostgreSQL error codes.
+`ConflictExceptionHandler` maps both to HTTP 409 with a stable `code`
+(`conflict.duplicate`, `conflict.concurrent_update`); constraint names are
+logged, never returned. Other database errors (e.g. a foreign-key violation a
+use case should have prevented) are bugs and stay 500. See
+[ADR 0005](adr/0005-persistence-conflicts-as-409.md).
+
+Any other unhandled exception becomes a generic 500 problem response without
+leaking details.
 
 ## Conventions
 
