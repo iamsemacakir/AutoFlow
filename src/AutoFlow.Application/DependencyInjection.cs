@@ -20,6 +20,9 @@ public static class DependencyInjection
 
         services.AddScoped<RegisterCustomerHandler>();
         services.AddScoped<UpdateCustomerHandler>();
+        services.AddScoped<DeleteCustomerHandler>();
+        services.AddScoped<GetCustomerHandler>();
+        services.AddScoped<ListCustomersHandler>();
         services.AddScoped<RegisterVehicleHandler>();
         services.AddScoped<RecordMileageHandler>();
         services.AddScoped<TransferVehicleHandler>();

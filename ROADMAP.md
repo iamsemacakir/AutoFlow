@@ -29,7 +29,7 @@ updated docs. Steps are done in order unless a dependency forces otherwise.
 ## Milestone 3 — Customer & vehicle endpoints
 
 - [x] Compose application + infrastructure in the API host; map unique-violation and concurrency conflicts to 409 problem responses
-- [ ] `/api/customers` CRUD with paging and search
+- [x] `/api/customers` CRUD with paging and search
 - [ ] `/api/customers/{id}/vehicles`, `/api/vehicles/{id}` incl. mileage and transfer
 - [ ] Request validation and consistent problem responses
 - [ ] API integration tests

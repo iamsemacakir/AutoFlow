@@ -13,6 +13,8 @@ public interface IVehicleRepository
 
     Task<bool> ExistsWithVinAsync(Vin vin, CancellationToken cancellationToken = default);
 
+    Task<bool> ExistsForCustomerAsync(Guid customerId, CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<Vehicle>> ListByCustomerAsync(Guid customerId, CancellationToken cancellationToken = default);
 
     void Add(Vehicle vehicle);

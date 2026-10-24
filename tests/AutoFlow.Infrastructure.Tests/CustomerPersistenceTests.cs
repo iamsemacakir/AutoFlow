@@ -101,6 +101,27 @@ public class CustomerPersistenceTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task Removed_customer_is_deleted_on_save()
+    {
+        var customer = TestData.Customer();
+        await using (var db = postgres.CreateContext())
+        {
+            db.Customers.Add(customer);
+            await db.SaveChangesAsync();
+        }
+
+        await using (var db = postgres.CreateContext())
+        {
+            var repository = new CustomerRepository(db);
+            repository.Remove((await repository.GetByIdAsync(customer.Id))!);
+            await ((IUnitOfWork)db).SaveChangesAsync();
+        }
+
+        await using var readDb = postgres.CreateContext();
+        Assert.False(await readDb.Customers.AnyAsync(c => c.Id == customer.Id));
+    }
+
+    [Fact]
     public async Task Concurrent_edits_of_the_same_customer_are_rejected_for_the_second_writer()
     {
         var customer = TestData.Customer();

@@ -64,6 +64,20 @@ public class VehiclePersistenceTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task ExistsForCustomerAsync_is_true_only_for_owners()
+    {
+        var owner = await SeedCustomerAsync();
+        var customerWithoutVehicles = await SeedCustomerAsync();
+        await SeedVehicleAsync(owner.Id);
+
+        await using var db = postgres.CreateContext();
+        var repository = new VehicleRepository(db);
+
+        Assert.True(await repository.ExistsForCustomerAsync(owner.Id));
+        Assert.False(await repository.ExistsForCustomerAsync(customerWithoutVehicles.Id));
+    }
+
+    [Fact]
     public async Task Recorded_mileage_and_transfer_are_saved_on_the_tracked_vehicle()
     {
         var owner = await SeedCustomerAsync();

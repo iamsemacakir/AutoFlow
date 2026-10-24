@@ -1,3 +1,4 @@
+using AutoFlow.Api.Customers;
 using AutoFlow.Api.Errors;
 using AutoFlow.Application;
 using AutoFlow.Infrastructure;
@@ -31,6 +32,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.MapHealthChecks("/health");
+
+app.MapCustomerEndpoints();
 
 app.MapGet("/", () => Results.Ok(new { name = "AutoFlow API", status = "running" }))
     .WithName("GetApiInfo")

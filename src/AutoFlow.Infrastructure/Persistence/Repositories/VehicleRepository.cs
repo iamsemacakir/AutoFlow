@@ -12,6 +12,9 @@ internal sealed class VehicleRepository(AutoFlowDbContext db) : IVehicleReposito
     public Task<bool> ExistsWithVinAsync(Vin vin, CancellationToken cancellationToken = default) =>
         db.Vehicles.AnyAsync(v => v.Vin == vin, cancellationToken);
 
+    public Task<bool> ExistsForCustomerAsync(Guid customerId, CancellationToken cancellationToken = default) =>
+        db.Vehicles.AnyAsync(v => v.CustomerId == customerId, cancellationToken);
+
     public async Task<IReadOnlyList<Vehicle>> ListByCustomerAsync(
         Guid customerId,
         CancellationToken cancellationToken = default) =>

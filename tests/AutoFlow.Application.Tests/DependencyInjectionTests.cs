@@ -27,6 +27,9 @@ public class DependencyInjectionTests
 
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<RegisterCustomerHandler>());
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<UpdateCustomerHandler>());
+        Assert.NotNull(scope.ServiceProvider.GetRequiredService<DeleteCustomerHandler>());
+        Assert.NotNull(scope.ServiceProvider.GetRequiredService<GetCustomerHandler>());
+        Assert.NotNull(scope.ServiceProvider.GetRequiredService<ListCustomersHandler>());
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<RegisterVehicleHandler>());
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<RecordMileageHandler>());
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<TransferVehicleHandler>());

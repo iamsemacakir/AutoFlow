@@ -20,14 +20,15 @@ Early foundation. See [ROADMAP.md](ROADMAP.md) for what is done and what comes n
 | Persistence: EF Core + PostgreSQL mappings, repositories | ✅ |
 | Database migrations, docker-compose for local PostgreSQL | ✅ |
 | API composition, 409 for write conflicts | ✅ |
-| Customer & vehicle HTTP endpoints | ⏳ next |
+| Customer endpoints: CRUD, paging, search | ✅ |
+| Vehicle endpoints, request validation | ⏳ next |
 | Work orders, appointments, invoices | ⏳ planned |
 | Auth, UI, deployment | ⏳ planned |
 
 ## Getting started
 
 Requirements: [.NET 10 SDK](https://dotnet.microsoft.com/download), and Docker
-for the infrastructure tests (they start a throw-away PostgreSQL container).
+for the infrastructure and API tests (they start throw-away PostgreSQL containers).
 
 ```bash
 dotnet restore
@@ -65,6 +66,25 @@ Useful endpoints while running in Development:
 - `GET /health` — liveness check
 - `GET /openapi/v1.json` — OpenAPI document
 
+### Customers API
+
+| Method & path | Purpose | Responses |
+| --- | --- | --- |
+| `GET /api/customers?search=&page=1&pageSize=20` | List customers by name; every search term must match first name, last name, e-mail or phone | 200, 400 |
+| `GET /api/customers/{id}` | Get one customer | 200, 404 |
+| `POST /api/customers` | Register a customer (`firstName`, `lastName`, `email`, `phoneNumber?`) | 201 + `Location`, 422 |
+| `PUT /api/customers/{id}` | Replace name and contact details | 200, 404, 409, 422 |
+| `DELETE /api/customers/{id}` | Delete a customer who owns no vehicles | 204, 404, 409 |
+
+Errors are RFC 9457 problem responses with a stable `code`
+(e.g. `customer.not_found`, `customer.has_vehicles`, `paging.invalid_page_size`).
+
+```bash
+curl -s localhost:5080/api/customers -H 'Content-Type: application/json' \
+  -d '{"firstName":"Anna","lastName":"Schmidt","email":"anna@example.com"}'
+curl -s 'localhost:5080/api/customers?search=schmidt'
+```
+
 ## Project layout
 
 ```
@@ -77,7 +97,7 @@ tests/
   AutoFlow.Domain.Tests/        unit tests for domain rules
   AutoFlow.Application.Tests/   use-case tests against in-memory fakes
   AutoFlow.Infrastructure.Tests/ persistence tests against PostgreSQL (Testcontainers)
-  AutoFlow.Api.Tests/      in-memory integration tests (WebApplicationFactory)
+  AutoFlow.Api.Tests/      HTTP tests of the full stack (WebApplicationFactory + PostgreSQL)
 docker-compose.yml   local PostgreSQL for development
 docs/
   architecture.md    layers, dependency rules, conventions
