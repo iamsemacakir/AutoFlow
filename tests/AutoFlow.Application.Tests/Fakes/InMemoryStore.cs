@@ -93,7 +93,8 @@ public sealed class InMemoryStore : IUnitOfWork, ICustomerRepository, IVehicleRe
         Task.FromResult(_vehicles.Values.Any(v => v.CustomerId == customerId));
 
     public Task<IReadOnlyList<Vehicle>> ListByCustomerAsync(Guid customerId, CancellationToken cancellationToken = default) =>
-        Task.FromResult<IReadOnlyList<Vehicle>>([.. _vehicles.Values.Where(v => v.CustomerId == customerId)]);
+        Task.FromResult<IReadOnlyList<Vehicle>>(
+        [.. _vehicles.Values.Where(v => v.CustomerId == customerId).OrderBy(v => v.RegisteredAt).ThenBy(v => v.Id)]);
 
     public void Add(Vehicle vehicle) => _pendingVehicles.Add(vehicle);
 }

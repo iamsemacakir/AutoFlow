@@ -83,9 +83,15 @@ authentication. Business rules do not live here.
   result; failures go through `Error.ToProblem()`, which writes an RFC 9457
   problem with the status from the `ErrorKind` and the error code in `code`.
 - Responses are the application read models (`CustomerDetails`,
-  `PagedList<CustomerDetails>`); request bodies are API records
-  (`CustomerRequest`). `POST` answers 201 with a `Location` header, `DELETE`
-  answers 204.
+  `PagedList<CustomerDetails>`, `VehicleDetails`); request bodies are API
+  records (`CustomerRequest`, `VehicleRequest`). `POST` answers 201 with a
+  `Location` header, `DELETE` answers 204.
+- A resource that belongs to another is created and listed under its parent
+  (`/api/customers/{customerId}/vehicles`) but addressed on its own afterwards
+  (`/api/vehicles/{id}`), so its URL survives a change of parent. State
+  changes that are not plain replacement get their own path: an idempotent
+  value with `PUT` (`/mileage`), a one-off action with `POST` (`/transfer`).
+  See [ADR 0007](adr/0007-vehicle-endpoints.md).
 
 - `Program.cs` is the composition root: `AddApplication()` plus
   `AddInfrastructure(ConnectionStrings:AutoFlow)`. A missing connection string

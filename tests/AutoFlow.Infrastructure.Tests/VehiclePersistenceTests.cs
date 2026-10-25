@@ -49,7 +49,7 @@ public class VehiclePersistenceTests(PostgresFixture postgres)
     }
 
     [Fact]
-    public async Task ListByCustomerAsync_returns_only_that_customers_vehicles_oldest_first()
+    public async Task ListByCustomerAsync_returns_only_that_customers_vehicles_oldest_first_untracked()
     {
         var owner = await SeedCustomerAsync();
         var otherOwner = await SeedCustomerAsync();
@@ -61,6 +61,7 @@ public class VehiclePersistenceTests(PostgresFixture postgres)
         var vehicles = await new VehicleRepository(db).ListByCustomerAsync(owner.Id);
 
         Assert.Equal(new[] { older.Id, newer.Id }, vehicles.Select(v => v.Id));
+        Assert.Empty(db.ChangeTracker.Entries());
     }
 
     [Fact]

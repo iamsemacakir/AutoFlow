@@ -1,10 +1,10 @@
 using System.Net;
 using System.Net.Http.Json;
-using System.Text.Json;
 using AutoFlow.Application.Common;
 using AutoFlow.Application.Customers;
 using AutoFlow.Application.Vehicles;
 using Microsoft.Extensions.DependencyInjection;
+using static AutoFlow.Api.Tests.ApiTestHelpers;
 
 namespace AutoFlow.Api.Tests.Customers;
 
@@ -65,7 +65,7 @@ public sealed class CustomerEndpointsTests : IDisposable
     [Fact]
     public async Task Put_replaces_name_and_contact_details()
     {
-        var customer = await CreateCustomerAsync("Anna", "Schmidt");
+        var customer = await _client.CreateCustomerAsync("Anna", "Schmidt");
 
         using var response = await _client.PutAsJsonAsync(
             Url($"/api/customers/{customer.Id}"),
@@ -93,7 +93,7 @@ public sealed class CustomerEndpointsTests : IDisposable
     [Fact]
     public async Task Delete_removes_a_customer_without_vehicles()
     {
-        var customer = await CreateCustomerAsync("Anna", "Schmidt");
+        var customer = await _client.CreateCustomerAsync("Anna", "Schmidt");
 
         using var deleted = await _client.DeleteAsync(Url($"/api/customers/{customer.Id}"));
         using var lookup = await _client.GetAsync(Url($"/api/customers/{customer.Id}"));
@@ -105,7 +105,7 @@ public sealed class CustomerEndpointsTests : IDisposable
     [Fact]
     public async Task Delete_customer_who_owns_a_vehicle_returns_409()
     {
-        var customer = await CreateCustomerAsync("Jonas", "Becker");
+        var customer = await _client.CreateCustomerAsync("Jonas", "Becker");
         using (var scope = _api.Factory.Services.CreateScope())
         {
             var registered = await scope.ServiceProvider.GetRequiredService<RegisterVehicleHandler>().HandleAsync(
@@ -122,9 +122,9 @@ public sealed class CustomerEndpointsTests : IDisposable
     public async Task Get_list_searches_and_pages()
     {
         var token = "t" + Guid.NewGuid().ToString("N")[..12];
-        var becker = await CreateCustomerAsync("Jonas", token + "Becker");
-        var schmidt = await CreateCustomerAsync("Anna", token + "Schmidt");
-        await CreateCustomerAsync("Mia", token + "Wagner");
+        var becker = await _client.CreateCustomerAsync("Jonas", token + "Becker");
+        var schmidt = await _client.CreateCustomerAsync("Anna", token + "Schmidt");
+        await _client.CreateCustomerAsync("Mia", token + "Wagner");
 
         var first = await _client.GetFromJsonAsync<PagedList<CustomerDetails>>(
             Url($"/api/customers?search={token}&page=1&pageSize=2"));
@@ -150,35 +150,4 @@ public sealed class CustomerEndpointsTests : IDisposable
     }
 
     public void Dispose() => _client.Dispose();
-
-    private static Uri Url(string relative) => new(relative, UriKind.Relative);
-
-    private static string UniqueVin()
-    {
-        const string alphabet = "ABCDEFGHJKLMNPRSTUVWXYZ0123456789";
-        return "WVW" + string.Concat(Enumerable.Range(0, 14).Select(_ => alphabet[Random.Shared.Next(alphabet.Length)]));
-    }
-
-    private async Task<CustomerDetails> CreateCustomerAsync(string firstName, string lastName)
-    {
-        using var response = await _client.PostAsJsonAsync(
-            Url("/api/customers"),
-            new { firstName, lastName, email = $"{firstName}@example.com" });
-        response.EnsureSuccessStatusCode();
-        return (await response.Content.ReadFromJsonAsync<CustomerDetails>())!;
-    }
-
-    /// <summary>PostgreSQL stores microseconds, .NET timestamps have 100 ns ticks.</summary>
-    private static void AssertSameInstant(DateTimeOffset expected, DateTimeOffset actual) =>
-        Assert.True((expected - actual).Duration() < TimeSpan.FromMilliseconds(1), $"{expected:O} != {actual:O}");
-
-    private static async Task AssertProblemAsync(HttpResponseMessage response, HttpStatusCode status, string code)
-    {
-        Assert.Equal(status, response.StatusCode);
-        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
-
-        using var problem = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        Assert.Equal((int)status, problem.RootElement.GetProperty("status").GetInt32());
-        Assert.Equal(code, problem.RootElement.GetProperty("code").GetString());
-    }
 }

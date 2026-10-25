@@ -15,6 +15,10 @@ public interface IVehicleRepository
 
     Task<bool> ExistsForCustomerAsync(Guid customerId, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Returns the vehicles a customer owns, ordered by registration time and
+    /// id. The returned entities are read-only snapshots and are not tracked.
+    /// </summary>
     Task<IReadOnlyList<Vehicle>> ListByCustomerAsync(Guid customerId, CancellationToken cancellationToken = default);
 
     void Add(Vehicle vehicle);

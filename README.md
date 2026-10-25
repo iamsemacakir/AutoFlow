@@ -21,7 +21,8 @@ Early foundation. See [ROADMAP.md](ROADMAP.md) for what is done and what comes n
 | Database migrations, docker-compose for local PostgreSQL | ✅ |
 | API composition, 409 for write conflicts | ✅ |
 | Customer endpoints: CRUD, paging, search | ✅ |
-| Vehicle endpoints, request validation | ⏳ next |
+| Vehicle endpoints: register, list per customer, mileage, transfer | ✅ |
+| Request validation, API integration tests | ⏳ next |
 | Work orders, appointments, invoices | ⏳ planned |
 | Auth, UI, deployment | ⏳ planned |
 
@@ -79,10 +80,26 @@ Useful endpoints while running in Development:
 Errors are RFC 9457 problem responses with a stable `code`
 (e.g. `customer.not_found`, `customer.has_vehicles`, `paging.invalid_page_size`).
 
+### Vehicles API
+
+| Method & path | Purpose | Responses |
+| --- | --- | --- |
+| `GET /api/customers/{customerId}/vehicles` | List a customer's vehicles, oldest registration first | 200, 404 |
+| `POST /api/customers/{customerId}/vehicles` | Register a vehicle (`vin`, `licensePlate`, `make`, `model`, `modelYear`, `mileageKm`) | 201 + `Location`, 404, 409, 422 |
+| `GET /api/vehicles/{id}` | Get one vehicle | 200, 404 |
+| `PUT /api/vehicles/{id}/mileage` | Record an odometer reading (`mileageKm`); readings never go backwards | 200, 404, 409, 422 |
+| `POST /api/vehicles/{id}/transfer` | Transfer the vehicle to another customer (`customerId`) | 200, 404, 409, 422 |
+
+A VIN can be registered only once (`vehicle.duplicate_vin`, 409); a car that
+changes hands is transferred, and keeps its `/api/vehicles/{id}` URL.
+
 ```bash
 curl -s localhost:5080/api/customers -H 'Content-Type: application/json' \
   -d '{"firstName":"Anna","lastName":"Schmidt","email":"anna@example.com"}'
 curl -s 'localhost:5080/api/customers?search=schmidt'
+curl -s localhost:5080/api/customers/<customer-id>/vehicles -H 'Content-Type: application/json' \
+  -d '{"vin":"WVWZZZ1JZXW000001","licensePlate":"M-AB 123","make":"Volkswagen","model":"Golf","modelYear":2019,"mileageKm":50000}'
+curl -s -X PUT localhost:5080/api/vehicles/<vehicle-id>/mileage -H 'Content-Type: application/json' -d '{"mileageKm":62500}'
 ```
 
 ## Project layout

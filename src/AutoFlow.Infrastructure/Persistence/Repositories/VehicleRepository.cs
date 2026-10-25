@@ -19,6 +19,7 @@ internal sealed class VehicleRepository(AutoFlowDbContext db) : IVehicleReposito
         Guid customerId,
         CancellationToken cancellationToken = default) =>
         await db.Vehicles
+            .AsNoTracking()
             .Where(v => v.CustomerId == customerId)
             .OrderBy(v => v.RegisteredAt)
             .ThenBy(v => v.Id)
