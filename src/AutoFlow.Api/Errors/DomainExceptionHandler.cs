@@ -6,7 +6,8 @@ namespace AutoFlow.Api.Errors;
 
 /// <summary>
 /// Turns a <see cref="DomainException"/> (a broken business rule) into an
-/// RFC 9457 problem response with status 422 instead of a 500.
+/// RFC 9457 problem response with status 422 and code
+/// <c>domain.rule_violated</c> instead of a 500.
 /// </summary>
 internal sealed class DomainExceptionHandler(IProblemDetailsService problemDetails) : IExceptionHandler
 {
@@ -31,6 +32,7 @@ internal sealed class DomainExceptionHandler(IProblemDetailsService problemDetai
                 Status = StatusCodes.Status422UnprocessableEntity,
                 Title = "Business rule violated",
                 Detail = domainException.Message,
+                Extensions = { [ProblemDetailsConventions.CodeKey] = ProblemCodes.BusinessRuleViolated },
             },
         });
     }

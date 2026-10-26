@@ -71,8 +71,7 @@ public sealed class VehicleEndpointsTests : IDisposable
 
         using var response = await PostVehicleAsync(owner.Id, "TOO-SHORT");
 
-        Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
-        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+        await AssertProblemAsync(response, HttpStatusCode.UnprocessableEntity, "domain.rule_violated");
     }
 
     [Fact]

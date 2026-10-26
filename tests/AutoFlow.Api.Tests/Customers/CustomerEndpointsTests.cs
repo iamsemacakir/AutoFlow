@@ -50,8 +50,7 @@ public sealed class CustomerEndpointsTests : IDisposable
             Url("/api/customers"),
             new { firstName = "Anna", lastName = "Schmidt", email = "not-an-email" });
 
-        Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
-        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+        await AssertProblemAsync(response, HttpStatusCode.UnprocessableEntity, "domain.rule_violated");
     }
 
     [Fact]

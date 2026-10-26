@@ -1,11 +1,25 @@
 using AutoFlow.Api.Errors;
+using AutoFlow.Api.Validation;
 using AutoFlow.Application.Common;
 using AutoFlow.Application.Customers;
+using AutoFlow.Domain.Customers;
 
 namespace AutoFlow.Api.Customers;
 
 /// <summary>Request body for creating and for replacing a customer.</summary>
-public sealed record CustomerRequest(string FirstName, string LastName, string Email, string? PhoneNumber);
+public sealed record CustomerRequest(string? FirstName, string? LastName, string? Email, string? PhoneNumber)
+    : IValidatableRequest
+{
+    public void Validate(ValidationErrors errors)
+    {
+        ArgumentNullException.ThrowIfNull(errors);
+
+        errors.RequireText("firstName", FirstName, Customer.NameMaxLength);
+        errors.RequireText("lastName", LastName, Customer.NameMaxLength);
+        errors.RequireText("email", Email, EmailAddress.MaxLength);
+        errors.OptionalText("phoneNumber", PhoneNumber, Customer.PhoneMaxLength);
+    }
+}
 
 /// <summary>
 /// <c>/api/customers</c>: list and search, read, create, replace and delete
@@ -18,7 +32,7 @@ internal static class CustomerEndpoints
 
     public static IEndpointRouteBuilder MapCustomerEndpoints(this IEndpointRouteBuilder app)
     {
-        var customers = app.MapGroup("/api/customers").WithTags("Customers");
+        var customers = app.MapGroup("/api/customers").WithTags("Customers").WithRequestValidation();
 
         customers.MapGet("/", ListCustomers)
             .WithName("ListCustomers")
@@ -36,12 +50,14 @@ internal static class CustomerEndpoints
             .WithName("CreateCustomer")
             .WithSummary("Registers a new customer.")
             .Produces<CustomerDetails>(StatusCodes.Status201Created)
+            .ProducesValidationProblem()
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
 
         customers.MapPut("/{id:guid}", UpdateCustomer)
             .WithName("UpdateCustomer")
             .WithSummary("Replaces a customer's name and contact details.")
             .Produces<CustomerDetails>()
+            .ProducesValidationProblem()
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict)
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
@@ -86,7 +102,7 @@ internal static class CustomerEndpoints
         CancellationToken cancellationToken)
     {
         var result = await handler.HandleAsync(
-            new RegisterCustomerCommand(request.FirstName, request.LastName, request.Email, request.PhoneNumber),
+            new RegisterCustomerCommand(request.FirstName!, request.LastName!, request.Email!, request.PhoneNumber),
             cancellationToken);
 
         return result.Match(
@@ -101,7 +117,7 @@ internal static class CustomerEndpoints
         CancellationToken cancellationToken)
     {
         var result = await handler.HandleAsync(
-            new UpdateCustomerCommand(id, request.FirstName, request.LastName, request.Email, request.PhoneNumber),
+            new UpdateCustomerCommand(id, request.FirstName!, request.LastName!, request.Email!, request.PhoneNumber),
             cancellationToken);
 
         return result.Match(value => Results.Ok(value), error => error.ToProblem());

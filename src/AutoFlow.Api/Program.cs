@@ -18,14 +18,22 @@ builder.Services.AddApplication();
 builder.Services.AddInfrastructure(connectionString);
 
 builder.Services.AddOpenApi();
-builder.Services.AddProblemDetails();
+builder.Services.AddProblemDetails(options => options.CustomizeProblemDetails = ProblemDetailsConventions.Apply);
+builder.Services.AddExceptionHandler<BadRequestExceptionHandler>();
 builder.Services.AddExceptionHandler<DomainExceptionHandler>();
 builder.Services.AddExceptionHandler<ConflictExceptionHandler>();
 builder.Services.AddHealthChecks();
 
+// Unbindable requests (malformed JSON, wrong content type) throw in every
+// environment, so BadRequestExceptionHandler answers them the same way everywhere.
+builder.Services.Configure<RouteHandlerOptions>(options => options.ThrowOnBadRequest = true);
+
 var app = builder.Build();
 
 app.UseExceptionHandler();
+
+// Bodiless 4xx/5xx answers (unmatched route, wrong method) become problem responses too.
+app.UseStatusCodePages();
 
 if (app.Environment.IsDevelopment())
 {

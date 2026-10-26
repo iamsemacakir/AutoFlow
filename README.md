@@ -22,7 +22,8 @@ Early foundation. See [ROADMAP.md](ROADMAP.md) for what is done and what comes n
 | API composition, 409 for write conflicts | ✅ |
 | Customer endpoints: CRUD, paging, search | ✅ |
 | Vehicle endpoints: register, list per customer, mileage, transfer | ✅ |
-| Request validation, API integration tests | ⏳ next |
+| Request validation, consistent problem responses | ✅ |
+| API integration tests | ⏳ next |
 | Work orders, appointments, invoices | ⏳ planned |
 | Auth, UI, deployment | ⏳ planned |
 
@@ -73,22 +74,23 @@ Useful endpoints while running in Development:
 | --- | --- | --- |
 | `GET /api/customers?search=&page=1&pageSize=20` | List customers by name; every search term must match first name, last name, e-mail or phone | 200, 400 |
 | `GET /api/customers/{id}` | Get one customer | 200, 404 |
-| `POST /api/customers` | Register a customer (`firstName`, `lastName`, `email`, `phoneNumber?`) | 201 + `Location`, 422 |
-| `PUT /api/customers/{id}` | Replace name and contact details | 200, 404, 409, 422 |
+| `POST /api/customers` | Register a customer (`firstName`, `lastName`, `email`, `phoneNumber?`) | 201 + `Location`, 400, 422 |
+| `PUT /api/customers/{id}` | Replace name and contact details | 200, 400, 404, 409, 422 |
 | `DELETE /api/customers/{id}` | Delete a customer who owns no vehicles | 204, 404, 409 |
 
-Errors are RFC 9457 problem responses with a stable `code`
-(e.g. `customer.not_found`, `customer.has_vehicles`, `paging.invalid_page_size`).
+`POST`/`PUT` bodies are validated first: missing, blank or overlong fields
+answer 400 with every field error at once; a well-formed request that breaks a
+business rule (bad e-mail syntax, invalid VIN, mileage going backwards) answers 422.
 
 ### Vehicles API
 
 | Method & path | Purpose | Responses |
 | --- | --- | --- |
 | `GET /api/customers/{customerId}/vehicles` | List a customer's vehicles, oldest registration first | 200, 404 |
-| `POST /api/customers/{customerId}/vehicles` | Register a vehicle (`vin`, `licensePlate`, `make`, `model`, `modelYear`, `mileageKm`) | 201 + `Location`, 404, 409, 422 |
+| `POST /api/customers/{customerId}/vehicles` | Register a vehicle (`vin`, `licensePlate`, `make`, `model`, `modelYear`, `mileageKm`) | 201 + `Location`, 400, 404, 409, 422 |
 | `GET /api/vehicles/{id}` | Get one vehicle | 200, 404 |
-| `PUT /api/vehicles/{id}/mileage` | Record an odometer reading (`mileageKm`); readings never go backwards | 200, 404, 409, 422 |
-| `POST /api/vehicles/{id}/transfer` | Transfer the vehicle to another customer (`customerId`) | 200, 404, 409, 422 |
+| `PUT /api/vehicles/{id}/mileage` | Record an odometer reading (`mileageKm`); readings never go backwards | 200, 400, 404, 409, 422 |
+| `POST /api/vehicles/{id}/transfer` | Transfer the vehicle to another customer (`customerId`) | 200, 400, 404, 409, 422 |
 
 A VIN can be registered only once (`vehicle.duplicate_vin`, 409); a car that
 changes hands is transferred, and keeps its `/api/vehicles/{id}` URL.
@@ -100,6 +102,36 @@ curl -s 'localhost:5080/api/customers?search=schmidt'
 curl -s localhost:5080/api/customers/<customer-id>/vehicles -H 'Content-Type: application/json' \
   -d '{"vin":"WVWZZZ1JZXW000001","licensePlate":"M-AB 123","make":"Volkswagen","model":"Golf","modelYear":2019,"mileageKm":50000}'
 curl -s -X PUT localhost:5080/api/vehicles/<vehicle-id>/mileage -H 'Content-Type: application/json' -d '{"mileageKm":62500}'
+```
+
+### Errors
+
+Every error is an RFC 9457 problem response (`application/problem+json`) with
+`status`, `title`, `detail`, `instance` (the request path), `traceId` and a
+stable `code` to switch on:
+
+| Status | `code` | When |
+| --- | --- | --- |
+| 400 | `validation.failed` (+ `errors` per field) | body fields missing, blank, too long or out of range |
+| 400 | `request.malformed` | unreadable JSON, wrong value type, unparsable query/route value |
+| 400 | `paging.invalid_page`, `paging.invalid_page_size` | paging out of range |
+| 404 | `customer.not_found`, `vehicle.not_found` / `route.not_found` | unknown resource / unknown URL |
+| 405, 415 | `request.method_not_allowed`, `request.unsupported_media_type` | wrong method, non-JSON body |
+| 409 | `customer.has_vehicles`, `vehicle.duplicate_vin`, `conflict.duplicate`, `conflict.concurrent_update` | conflicts |
+| 422 | `domain.rule_violated` | business rule broken |
+| 500 | `server.error` | unexpected failure (no details leaked) |
+
+```json
+{
+  "type": "https://tools.ietf.org/html/rfc9110#section-15.5.1",
+  "title": "Invalid request",
+  "status": 400,
+  "detail": "One or more fields are missing or invalid.",
+  "instance": "/api/customers",
+  "errors": { "email": ["'email' is required."] },
+  "code": "validation.failed",
+  "traceId": "00-…"
+}
 ```
 
 ## Project layout

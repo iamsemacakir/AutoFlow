@@ -31,7 +31,7 @@ updated docs. Steps are done in order unless a dependency forces otherwise.
 - [x] Compose application + infrastructure in the API host; map unique-violation and concurrency conflicts to 409 problem responses
 - [x] `/api/customers` CRUD with paging and search
 - [x] `/api/customers/{id}/vehicles`, `/api/vehicles/{id}` incl. mileage and transfer
-- [ ] Request validation and consistent problem responses
+- [x] Request validation and consistent problem responses
 - [ ] API integration tests
 
 ## Milestone 4 — Work orders

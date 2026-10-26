@@ -92,6 +92,12 @@ authentication. Business rules do not live here.
   changes that are not plain replacement get their own path: an idempotent
   value with `PUT` (`/mileage`), a one-off action with `POST` (`/transfer`).
   See [ADR 0007](adr/0007-vehicle-endpoints.md).
+- Request records implement `IValidatableRequest` and check their shape
+  (required, length, simple bounds, using the domain's constants); each
+  endpoint group calls `WithRequestValidation()`, whose filter answers 400
+  `validation.failed` with every field error before the handler runs.
+  Numbers and ids in requests are nullable so a missing field is not `0`.
+  See [ADR 0008](adr/0008-request-validation-and-problem-responses.md).
 
 - `Program.cs` is the composition root: `AddApplication()` plus
   `AddInfrastructure(ConnectionStrings:AutoFlow)`. A missing connection string
@@ -104,6 +110,9 @@ Two kinds of failure, two mechanisms:
 
 | Failure | Example | Mechanism | HTTP |
 | --- | --- | --- | --- |
+| Unreadable request | malformed JSON, `"page=abc"`, non-JSON body | `BadHttpRequestException` → `BadRequestExceptionHandler` | 400 / 415 |
+| Request shape | missing `lastName`, `mileageKm` absent or negative | `IValidatableRequest` + validation filter | 400 with `errors` |
+| No such route or method | `/api/customers/not-a-guid`, `DELETE /api/vehicles/{id}` | status-code pages | 404 / 405 |
 | Expected outcome of a lookup or uniqueness check | unknown customer, duplicate VIN | `Result<T>` with `Error` | 404 / 409 |
 | Invalid input or broken business rule | malformed VIN, mileage going backwards | `DomainException` | 422 |
 | Lost race caught by the database | same VIN registered twice at once, concurrent edit | `UniqueConstraintViolationException` / `ConcurrencyConflictException` from `IUnitOfWork` | 409 |
@@ -126,6 +135,15 @@ use case should have prevented) are bugs and stay 500. See
 
 Any other unhandled exception becomes a generic 500 problem response without
 leaking details.
+
+Every problem response has the same shape, whichever component wrote it:
+`ProblemDetailsConventions.Apply` (registered as
+`ProblemDetailsOptions.CustomizeProblemDetails`) adds `instance` (request
+path), `traceId` and, when the writer set none, a `code` derived from the
+status (`ProblemCodes`: `request.malformed`, `route.not_found`,
+`domain.rule_violated`, `server.error`, …). Clients switch on `code`, never
+on `title` or `detail`. See
+[ADR 0008](adr/0008-request-validation-and-problem-responses.md).
 
 ## Conventions
 
