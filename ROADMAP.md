@@ -26,13 +26,13 @@ updated docs. Steps are done in order unless a dependency forces otherwise.
 - [x] Initial migration and `docker-compose.yml` for local PostgreSQL
 - [x] Integration tests against PostgreSQL (Testcontainers) in CI
 
-## Milestone 3 — Customer & vehicle endpoints
+## Milestone 3 — Customer & vehicle endpoints ✅
 
 - [x] Compose application + infrastructure in the API host; map unique-violation and concurrency conflicts to 409 problem responses
 - [x] `/api/customers` CRUD with paging and search
 - [x] `/api/customers/{id}/vehicles`, `/api/vehicles/{id}` incl. mileage and transfer
 - [x] Request validation and consistent problem responses
-- [ ] API integration tests
+- [x] API integration tests: OpenAPI contract, simultaneous requests, end-to-end workflow
 
 ## Milestone 4 — Work orders
 

@@ -23,8 +23,9 @@ Early foundation. See [ROADMAP.md](ROADMAP.md) for what is done and what comes n
 | Customer endpoints: CRUD, paging, search | ✅ |
 | Vehicle endpoints: register, list per customer, mileage, transfer | ✅ |
 | Request validation, consistent problem responses | ✅ |
-| API integration tests | ⏳ next |
-| Work orders, appointments, invoices | ⏳ planned |
+| API integration tests: OpenAPI contract, races, workflows | ✅ |
+| Work orders: aggregate, status flow, lines | ⏳ next |
+| Appointments, invoices | ⏳ planned |
 | Auth, UI, deployment | ⏳ planned |
 
 ## Getting started
@@ -92,6 +93,9 @@ business rule (bad e-mail syntax, invalid VIN, mileage going backwards) answers 
 | `PUT /api/vehicles/{id}/mileage` | Record an odometer reading (`mileageKm`); readings never go backwards | 200, 400, 404, 409, 422 |
 | `POST /api/vehicles/{id}/transfer` | Transfer the vehicle to another customer (`customerId`) | 200, 400, 404, 409, 422 |
 
+Both endpoint tables above are pinned by
+`OpenApiContractTests` against `/openapi/v1.json`; change both together.
+
 A VIN can be registered only once (`vehicle.duplicate_vin`, 409); a car that
 changes hands is transferred, and keeps its `/api/vehicles/{id}` URL.
 
@@ -146,7 +150,8 @@ tests/
   AutoFlow.Domain.Tests/        unit tests for domain rules
   AutoFlow.Application.Tests/   use-case tests against in-memory fakes
   AutoFlow.Infrastructure.Tests/ persistence tests against PostgreSQL (Testcontainers)
-  AutoFlow.Api.Tests/      HTTP tests of the full stack (WebApplicationFactory + PostgreSQL)
+  AutoFlow.Api.Tests/      HTTP tests of the full stack (WebApplicationFactory + PostgreSQL):
+                           endpoints, OpenAPI contract, simultaneous requests, workflows
 docker-compose.yml   local PostgreSQL for development
 docs/
   architecture.md    layers, dependency rules, conventions

@@ -29,6 +29,18 @@ internal static class ApiTestHelpers
     public static void AssertSameInstant(DateTimeOffset expected, DateTimeOffset actual) =>
         Assert.True((expected - actual).Duration() < TimeSpan.FromMilliseconds(1), $"{expected:O} != {actual:O}");
 
+    /// <summary>The problem <c>code</c> of an error response, or <see langword="null"/> for a success.</summary>
+    public static async Task<string?> ReadProblemCodeAsync(HttpResponseMessage response)
+    {
+        if (response.Content.Headers.ContentType?.MediaType != "application/problem+json")
+        {
+            return null;
+        }
+
+        using var problem = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        return problem.RootElement.TryGetProperty("code", out var code) ? code.GetString() : null;
+    }
+
     public static async Task AssertProblemAsync(HttpResponseMessage response, HttpStatusCode status, string code)
     {
         Assert.Equal(status, response.StatusCode);

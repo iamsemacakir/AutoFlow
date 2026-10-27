@@ -155,7 +155,13 @@ on `title` or `detail`. See
 - Timestamps are UTC `DateTimeOffset`s, stored as `timestamptz`.
 - API tests that touch data host the whole application with
   `WebApplicationFactory` against their own PostgreSQL container
-  (`ApiDatabaseFixture`); nothing is faked.
+  (`ApiDatabaseFixture`); nothing is faked. Besides per-endpoint tests there
+  are three kinds: `OpenApiContractTests` pin every operation's id, path and
+  statuses in the OpenAPI document; `ConcurrentRequestTests` fire competing
+  requests at once and assert invariants that hold for every interleaving
+  (one winner, documented 409/422 for the rest, never 500); workflow tests
+  follow a realistic sequence of calls through `Location` headers. See
+  [ADR 0009](adr/0009-api-contract-and-race-tests.md).
 - Infrastructure tests run against real PostgreSQL in a Testcontainers
   container (Docker required) whose schema is built by applying the
   migrations; tests isolate themselves with fresh ids and
