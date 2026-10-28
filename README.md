@@ -24,7 +24,8 @@ Early foundation. See [ROADMAP.md](ROADMAP.md) for what is done and what comes n
 | Vehicle endpoints: register, list per customer, mileage, transfer | ✅ |
 | Request validation, consistent problem responses | ✅ |
 | API integration tests: OpenAPI contract, races, workflows | ✅ |
-| Work orders: aggregate, status flow, lines | ⏳ next |
+| Work orders: domain aggregate, status flow, labour/part lines | ✅ |
+| Work orders: persistence, use cases, endpoints | ⏳ next |
 | Appointments, invoices | ⏳ planned |
 | Auth, UI, deployment | ⏳ planned |
 

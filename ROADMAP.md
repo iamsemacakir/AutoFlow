@@ -36,7 +36,9 @@ updated docs. Steps are done in order unless a dependency forces otherwise.
 
 ## Milestone 4 — Work orders
 
-- [ ] `WorkOrder` aggregate: status flow (Draft → Approved → InProgress → Completed → Invoiced), labour and part lines
+- [x] `WorkOrder` aggregate: status flow (Draft → Approved → InProgress → Completed → Invoiced, plus Cancelled), labour and part lines, net totals
+- [ ] Persistence: work order and line tables, migration, version bump on line changes, `IWorkOrderRepository`
+- [ ] Use cases: open (from the vehicle's current owner), edit lines, approve, start, complete, cancel, list per vehicle
 - [ ] Endpoints and tests
 
 ## Milestone 5 — Appointments
