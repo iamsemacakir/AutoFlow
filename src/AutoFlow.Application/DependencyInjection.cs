@@ -1,5 +1,6 @@
 using AutoFlow.Application.Customers;
 using AutoFlow.Application.Vehicles;
+using AutoFlow.Application.WorkOrders;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -28,6 +29,7 @@ public static class DependencyInjection
         services.AddScoped<TransferVehicleHandler>();
         services.AddScoped<GetVehicleHandler>();
         services.AddScoped<ListCustomerVehiclesHandler>();
+        services.AddScoped<OpenWorkOrderHandler>();
 
         return services;
     }

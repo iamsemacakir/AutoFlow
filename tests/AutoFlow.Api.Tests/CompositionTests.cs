@@ -1,6 +1,7 @@
 using AutoFlow.Application.Abstractions;
 using AutoFlow.Application.Customers;
 using AutoFlow.Application.Vehicles;
+using AutoFlow.Application.WorkOrders;
 using AutoFlow.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
@@ -23,6 +24,7 @@ public class CompositionTests(WebApplicationFactory<Program> factory)
     [InlineData(typeof(RegisterVehicleHandler))]
     [InlineData(typeof(RecordMileageHandler))]
     [InlineData(typeof(TransferVehicleHandler))]
+    [InlineData(typeof(OpenWorkOrderHandler))]
     [InlineData(typeof(IUnitOfWork))]
     [InlineData(typeof(IWorkOrderRepository))]
     public void Use_case_handlers_and_persistence_resolve_per_request(Type service)

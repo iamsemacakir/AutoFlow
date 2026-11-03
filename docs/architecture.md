@@ -39,13 +39,17 @@ See [ADR 0002](adr/0002-use-case-handlers-and-result-type.md).
 
 - One use case = one `XxxCommand` record (`XxxQuery` for read-only use
   cases) + one `XxxHandler` class with a `HandleAsync(command, ct)` method,
-  grouped by feature folder (`Customers/`, `Vehicles/`). No mediator library.
+  grouped by feature folder (`Customers/`, `Vehicles/`, `WorkOrders/`). No mediator library.
 - Handlers load aggregates through `ICustomerRepository` / `IVehicleRepository`,
   call domain behaviour, then commit once via `IUnitOfWork.SaveChangesAsync`.
   Loaded entities are tracked, so repositories have no `Update` method.
 - Handlers return `Result<T>` where `T` is a read model (`CustomerDetails`,
-  `VehicleDetails`), never a domain entity, so the API cannot mutate aggregates
-  by accident.
+  `VehicleDetails`, `WorkOrderDetails`), never a domain entity, so the API
+  cannot mutate aggregates by accident. Read models expose enum values by name
+  (`"InProgress"`), as they are stored.
+- A use case may change two aggregates in one commit when the business step
+  does: `OpenWorkOrderHandler` records the intake odometer reading on the
+  vehicle and opens the work order (for the vehicle's current owner) together.
 - Errors carry a stable `Code` (`customer.not_found`, `vehicle.duplicate_vin`)
   and an `ErrorKind` that the API maps to HTTP status codes
   (Validation → 400, NotFound → 404, Conflict → 409).

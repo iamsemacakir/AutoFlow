@@ -2,6 +2,7 @@ using AutoFlow.Application;
 using AutoFlow.Application.Common;
 using AutoFlow.Application.Customers;
 using AutoFlow.Application.Vehicles;
+using AutoFlow.Application.WorkOrders;
 using AutoFlow.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -60,6 +61,28 @@ public sealed class UseCaseIntegrationTests : IDisposable
 
         Assert.True(result.IsFailure);
         Assert.Equal("vehicle.duplicate_vin", result.Error.Code);
+    }
+
+    [Fact]
+    public async Task Opening_a_work_order_stores_it_and_the_intake_reading_in_one_commit()
+    {
+        var customer = await InScope<RegisterCustomerHandler, CustomerDetails>(handler =>
+            handler.HandleAsync(new RegisterCustomerCommand("Lena", "Hoffmann", "lena@example.com", null)));
+        var vehicle = await InScope<RegisterVehicleHandler, VehicleDetails>(handler =>
+            handler.HandleAsync(new RegisterVehicleCommand(customer.Id, TestData.UniqueVin(), "S-LH 5", "Audi", "A4", 2020, 40_000)));
+
+        var opened = await InScope<OpenWorkOrderHandler, WorkOrderDetails>(handler =>
+            handler.HandleAsync(new OpenWorkOrderCommand(vehicle.Id, "Annual service", 45_300)));
+
+        using var scope = _provider.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AutoFlowDbContext>();
+        var stored = await db.WorkOrders.SingleAsync(w => w.Id == opened.Id);
+        var storedVehicle = await db.Vehicles.SingleAsync(v => v.Id == vehicle.Id);
+
+        Assert.Equal(customer.Id, stored.CustomerId);
+        Assert.Equal(45_300, stored.MileageKmAtIntake);
+        Assert.Equal(TestData.Now, stored.CreatedAt);
+        Assert.Equal(45_300, storedVehicle.MileageKm);
     }
 
     public void Dispose() => _provider.Dispose();

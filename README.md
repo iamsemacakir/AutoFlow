@@ -26,7 +26,8 @@ Early foundation. See [ROADMAP.md](ROADMAP.md) for what is done and what comes n
 | API integration tests: OpenAPI contract, races, workflows | ✅ |
 | Work orders: domain aggregate, status flow, labour/part lines | ✅ |
 | Work orders: persistence (lines table, migration, concurrency) | ✅ |
-| Work orders: use cases, endpoints | ⏳ next |
+| Work orders: open use case (intake reading, current owner) | ✅ |
+| Work orders: remaining use cases, endpoints | ⏳ next |
 | Appointments, invoices | ⏳ planned |
 | Auth, UI, deployment | ⏳ planned |
 

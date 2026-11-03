@@ -2,6 +2,7 @@ using AutoFlow.Application.Abstractions;
 using AutoFlow.Application.Customers;
 using AutoFlow.Application.Tests.Fakes;
 using AutoFlow.Application.Vehicles;
+using AutoFlow.Application.WorkOrders;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace AutoFlow.Application.Tests;
@@ -36,6 +37,7 @@ public class DependencyInjectionTests
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<TransferVehicleHandler>());
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<GetVehicleHandler>());
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<ListCustomerVehiclesHandler>());
+        Assert.NotNull(scope.ServiceProvider.GetRequiredService<OpenWorkOrderHandler>());
         Assert.Same(TimeProvider.System, provider.GetRequiredService<TimeProvider>());
     }
 
