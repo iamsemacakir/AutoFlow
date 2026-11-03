@@ -1,8 +1,10 @@
 using System.Net;
 using System.Net.Http.Json;
+using AutoFlow.Application.Abstractions;
 using AutoFlow.Application.Common;
 using AutoFlow.Application.Customers;
 using AutoFlow.Application.Vehicles;
+using AutoFlow.Domain.WorkOrders;
 using Microsoft.Extensions.DependencyInjection;
 using static AutoFlow.Api.Tests.ApiTestHelpers;
 
@@ -115,6 +117,33 @@ public sealed class CustomerEndpointsTests : IDisposable
         using var response = await _client.DeleteAsync(Url($"/api/customers/{customer.Id}"));
 
         await AssertProblemAsync(response, HttpStatusCode.Conflict, "customer.has_vehicles");
+    }
+
+    [Fact]
+    public async Task Delete_customer_with_a_work_order_returns_409_even_after_selling_the_vehicle()
+    {
+        var customer = await _client.CreateCustomerAsync("Mia", "Wagner");
+        var buyer = await _client.CreateCustomerAsync("Lukas", "Fischer");
+        using (var scope = _api.Factory.Services.CreateScope())
+        {
+            var services = scope.ServiceProvider;
+            var registered = await services.GetRequiredService<RegisterVehicleHandler>().HandleAsync(
+                new RegisterVehicleCommand(customer.Id, UniqueVin(), "K-MW 7", "Opel", "Corsa", 2018, 80_000));
+            var workOrder = WorkOrder.Open(
+                registered.Value.Id, customer.Id, "Annual service", 80_000, services.GetRequiredService<TimeProvider>().GetUtcNow());
+            services.GetRequiredService<IWorkOrderRepository>().Add(workOrder);
+            await services.GetRequiredService<IUnitOfWork>().SaveChangesAsync();
+
+            var transferred = await services.GetRequiredService<TransferVehicleHandler>().HandleAsync(
+                new TransferVehicleCommand(registered.Value.Id, buyer.Id));
+            Assert.True(transferred.IsSuccess);
+        }
+
+        using var response = await _client.DeleteAsync(Url($"/api/customers/{customer.Id}"));
+        using var lookup = await _client.GetAsync(Url($"/api/customers/{customer.Id}"));
+
+        await AssertProblemAsync(response, HttpStatusCode.Conflict, "customer.has_work_orders");
+        Assert.Equal(HttpStatusCode.OK, lookup.StatusCode);
     }
 
     [Fact]

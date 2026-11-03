@@ -9,7 +9,7 @@ public class DeleteCustomerHandlerTests
     private readonly InMemoryStore _store = new();
     private readonly DeleteCustomerHandler _handler;
 
-    public DeleteCustomerHandlerTests() => _handler = new DeleteCustomerHandler(_store, _store, _store);
+    public DeleteCustomerHandlerTests() => _handler = new DeleteCustomerHandler(_store, _store, _store, _store);
 
     [Fact]
     public async Task Handle_deletes_a_customer_without_vehicles()
@@ -36,6 +36,24 @@ public class DeleteCustomerHandlerTests
         Assert.Equal(ErrorKind.Conflict, result.Error.Kind);
         Assert.Equal("customer.has_vehicles", result.Error.Code);
         Assert.Single(_store.Customers);
+        Assert.Equal(0, _store.SaveCount);
+    }
+
+    [Fact]
+    public async Task Handle_refuses_to_delete_a_customer_with_work_orders_after_the_vehicle_was_sold()
+    {
+        var customer = _store.Seed(TestData.Customer());
+        var buyer = _store.Seed(TestData.Customer("Jonas", "Becker"));
+        var vehicle = _store.Seed(TestData.Vehicle(customer.Id));
+        _store.Seed(TestData.WorkOrder(vehicle));
+        vehicle.TransferTo(buyer.Id);
+
+        var result = await _handler.HandleAsync(new DeleteCustomerCommand(customer.Id));
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(ErrorKind.Conflict, result.Error.Kind);
+        Assert.Equal("customer.has_work_orders", result.Error.Code);
+        Assert.Equal(2, _store.Customers.Count);
         Assert.Equal(0, _store.SaveCount);
     }
 

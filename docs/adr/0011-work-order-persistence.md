@@ -57,9 +57,10 @@ the `work_orders` row, which a line insert or delete does not change.
 
 - `IWorkOrderRepository` only needs `GetByIdAsync` and `Add`; the use cases
   change lines through the tracked aggregate and commit once.
-- Deleting a customer who has work orders now violates
-  `fk_work_orders_customers_customer_id`; the delete use case has to check for
-  work orders first, like it does for vehicles.
+- Deleting a customer who has work orders would violate
+  `fk_work_orders_customers_customer_id` (a 500), even once their vehicle has
+  been sold; `DeleteCustomerHandler` therefore checks first and refuses with
+  `customer.has_work_orders` (409), like it does for vehicles.
 - Every line table row also has its own `xmin`, so removing a line that
   another request already removed is a concurrency conflict too.
 - The version bump writes one extra `UPDATE` per save that changes lines;

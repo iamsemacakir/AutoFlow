@@ -13,5 +13,11 @@ public interface IWorkOrderRepository
 {
     Task<WorkOrder?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// True if the customer commissioned any work order, in any status. Work
+    /// orders stay with that customer even after the vehicle is sold.
+    /// </summary>
+    Task<bool> ExistsForCustomerAsync(Guid customerId, CancellationToken cancellationToken = default);
+
     void Add(WorkOrder workOrder);
 }

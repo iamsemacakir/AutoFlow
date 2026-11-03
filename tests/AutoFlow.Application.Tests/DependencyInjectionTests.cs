@@ -15,6 +15,7 @@ public class DependencyInjectionTests
         var services = new ServiceCollection()
             .AddSingleton<ICustomerRepository>(store)
             .AddSingleton<IVehicleRepository>(store)
+            .AddSingleton<IWorkOrderRepository>(store)
             .AddSingleton<IUnitOfWork>(store)
             .AddApplication();
 

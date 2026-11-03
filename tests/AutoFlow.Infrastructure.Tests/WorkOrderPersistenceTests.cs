@@ -167,6 +167,19 @@ public class WorkOrderPersistenceTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task ExistsForCustomerAsync_is_true_only_for_customers_who_commissioned_work()
+    {
+        var workOrder = await SeedWorkOrderAsync(w => w.Cancel("Customer declined the estimate", TestData.Now));
+        var customerWithoutWorkOrders = await SeedCustomerAsync();
+
+        await using var db = postgres.CreateContext();
+        var repository = new WorkOrderRepository(db);
+
+        Assert.True(await repository.ExistsForCustomerAsync(workOrder.CustomerId));
+        Assert.False(await repository.ExistsForCustomerAsync(customerWithoutWorkOrders.Id));
+    }
+
+    [Fact]
     public async Task Foreign_key_rejects_a_work_order_for_an_unknown_vehicle()
     {
         var customer = await SeedCustomerAsync();

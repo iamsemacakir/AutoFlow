@@ -64,7 +64,7 @@ internal static class CustomerEndpoints
 
         customers.MapDelete("/{id:guid}", DeleteCustomer)
             .WithName("DeleteCustomer")
-            .WithSummary("Deletes a customer who owns no vehicles.")
+            .WithSummary("Deletes a customer who owns no vehicles and has no work orders.")
             .Produces(StatusCodes.Status204NoContent)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict);
