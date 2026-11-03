@@ -1,6 +1,8 @@
 using AutoFlow.Application.Abstractions;
 using AutoFlow.Domain.Customers;
 using AutoFlow.Domain.Vehicles;
+using AutoFlow.Domain.WorkOrders;
+using AutoFlow.Infrastructure.Persistence.Configurations;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
@@ -17,6 +19,22 @@ public sealed class AutoFlowDbContext(DbContextOptions<AutoFlowDbContext> option
     public DbSet<Customer> Customers => Set<Customer>();
 
     public DbSet<Vehicle> Vehicles => Set<Vehicle>();
+
+    public DbSet<WorkOrder> WorkOrders => Set<WorkOrder>();
+
+    public override int SaveChanges(bool acceptAllChangesOnSuccess)
+    {
+        TouchWorkOrdersWithChangedLines();
+        return base.SaveChanges(acceptAllChangesOnSuccess);
+    }
+
+    public override Task<int> SaveChangesAsync(
+        bool acceptAllChangesOnSuccess,
+        CancellationToken cancellationToken = default)
+    {
+        TouchWorkOrdersWithChangedLines();
+        return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+    }
 
     /// <summary>
     /// Commits like <see cref="DbContext.SaveChangesAsync(CancellationToken)"/>,
@@ -44,6 +62,40 @@ public sealed class AutoFlowDbContext(DbContextOptions<AutoFlowDbContext> option
                 "A record with the same unique value already exists.",
                 postgresError.ConstraintName,
                 exception);
+        }
+    }
+
+    /// <summary>
+    /// The <c>xmin</c> concurrency token sits on the <c>work_orders</c> row, so
+    /// adding or removing a line alone would not change it and two concurrent
+    /// edits of the same work order would both succeed. Marking the root as
+    /// modified makes EF Core issue an <c>UPDATE … WHERE xmin = @version</c> on
+    /// the work order in the same transaction: the edit that loses the race
+    /// fails with a concurrency conflict, and every saved line change bumps
+    /// the work order's version (ADR 0011).
+    /// </summary>
+    private void TouchWorkOrdersWithChangedLines()
+    {
+        var workOrderIds = ChangeTracker.Entries<WorkOrderLine>()
+            .Where(line => line.State is EntityState.Added or EntityState.Deleted or EntityState.Modified)
+            .Select(line =>
+            {
+                var workOrderId = line.Property(WorkOrderConfiguration.LineWorkOrderIdProperty);
+                return (Guid)(line.State == EntityState.Deleted ? workOrderId.OriginalValue : workOrderId.CurrentValue)!;
+            })
+            .ToHashSet();
+
+        if (workOrderIds.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var workOrder in ChangeTracker.Entries<WorkOrder>())
+        {
+            if (workOrder.State == EntityState.Unchanged && workOrderIds.Contains(workOrder.Entity.Id))
+            {
+                workOrder.Property(w => w.Complaint).IsModified = true;
+            }
         }
     }
 

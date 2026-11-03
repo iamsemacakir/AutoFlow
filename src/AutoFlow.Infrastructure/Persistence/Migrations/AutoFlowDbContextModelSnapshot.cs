@@ -144,6 +144,93 @@ namespace AutoFlow.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("AutoFlow.Domain.WorkOrders.WorkOrder", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset?>("ApprovedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("approved_at");
+
+                    b.Property<decimal?>("ApprovedTotal")
+                        .HasPrecision(15, 2)
+                        .HasColumnType("numeric(15,2)")
+                        .HasColumnName("approved_total");
+
+                    b.Property<string>("CancellationReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("cancellation_reason");
+
+                    b.Property<DateTimeOffset?>("CancelledAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("cancelled_at");
+
+                    b.Property<string>("Complaint")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("complaint");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("completed_at");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("customer_id");
+
+                    b.Property<DateTimeOffset?>("InvoicedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("invoiced_at");
+
+                    b.Property<int>("MileageKmAtIntake")
+                        .HasColumnType("integer")
+                        .HasColumnName("mileage_km_at_intake");
+
+                    b.Property<DateTimeOffset?>("StartedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("started_at");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("VehicleId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("vehicle_id");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_work_orders");
+
+                    b.HasIndex("CustomerId")
+                        .HasDatabaseName("ix_work_orders_customer_id");
+
+                    b.HasIndex("VehicleId")
+                        .HasDatabaseName("ix_work_orders_vehicle_id");
+
+                    b.ToTable("work_orders", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_work_orders_mileage_km_at_intake_non_negative", "mileage_km_at_intake >= 0");
+
+                            t.HasCheckConstraint("ck_work_orders_status", "status IN ('Draft', 'Approved', 'InProgress', 'Completed', 'Invoiced', 'Cancelled')");
+                        });
+                });
+
             modelBuilder.Entity("AutoFlow.Domain.Vehicles.Vehicle", b =>
                 {
                     b.HasOne("AutoFlow.Domain.Customers.Customer", null)
@@ -152,6 +239,97 @@ namespace AutoFlow.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_vehicles_customers_customer_id");
+                });
+
+            modelBuilder.Entity("AutoFlow.Domain.WorkOrders.WorkOrder", b =>
+                {
+                    b.HasOne("AutoFlow.Domain.Customers.Customer", null)
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_work_orders_customers_customer_id");
+
+                    b.HasOne("AutoFlow.Domain.Vehicles.Vehicle", null)
+                        .WithMany()
+                        .HasForeignKey("VehicleId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_work_orders_vehicles_vehicle_id");
+
+                    b.OwnsMany("AutoFlow.Domain.WorkOrders.WorkOrderLine", "Lines", b1 =>
+                        {
+                            b1.Property<Guid>("Id")
+                                .HasColumnType("uuid")
+                                .HasColumnName("id");
+
+                            b1.Property<string>("Description")
+                                .IsRequired()
+                                .HasMaxLength(200)
+                                .HasColumnType("character varying(200)")
+                                .HasColumnName("description");
+
+                            b1.Property<string>("Kind")
+                                .IsRequired()
+                                .HasMaxLength(20)
+                                .HasColumnType("character varying(20)")
+                                .HasColumnName("kind");
+
+                            b1.Property<int>("Number")
+                                .HasColumnType("integer")
+                                .HasColumnName("number");
+
+                            b1.Property<string>("PartNumber")
+                                .HasMaxLength(40)
+                                .HasColumnType("character varying(40)")
+                                .HasColumnName("part_number");
+
+                            b1.Property<decimal>("Quantity")
+                                .HasPrecision(7, 2)
+                                .HasColumnType("numeric(7,2)")
+                                .HasColumnName("quantity");
+
+                            b1.Property<decimal>("UnitPrice")
+                                .HasPrecision(9, 2)
+                                .HasColumnType("numeric(9,2)")
+                                .HasColumnName("unit_price");
+
+                            b1.Property<uint>("Version")
+                                .IsConcurrencyToken()
+                                .ValueGeneratedOnAddOrUpdate()
+                                .HasColumnType("xid")
+                                .HasColumnName("xmin");
+
+                            b1.Property<Guid>("WorkOrderId")
+                                .HasColumnType("uuid")
+                                .HasColumnName("work_order_id");
+
+                            b1.HasKey("Id")
+                                .HasName("pk_work_order_lines");
+
+                            b1.HasIndex("WorkOrderId", "Number")
+                                .IsUnique()
+                                .HasDatabaseName("ux_work_order_lines_work_order_id_number");
+
+                            b1.ToTable("work_order_lines", null, t =>
+                                {
+                                    t.HasCheckConstraint("ck_work_order_lines_kind", "kind IN ('Labour', 'Part')");
+
+                                    t.HasCheckConstraint("ck_work_order_lines_number_positive", "number > 0");
+
+                                    t.HasCheckConstraint("ck_work_order_lines_part_number_only_for_parts", "kind = 'Part' OR part_number IS NULL");
+
+                                    t.HasCheckConstraint("ck_work_order_lines_quantity_positive", "quantity > 0");
+
+                                    t.HasCheckConstraint("ck_work_order_lines_unit_price_non_negative", "unit_price >= 0");
+                                });
+
+                            b1.WithOwner()
+                                .HasForeignKey("WorkOrderId")
+                                .HasConstraintName("fk_work_order_lines_work_orders_work_order_id");
+                        });
+
+                    b.Navigation("Lines");
                 });
 #pragma warning restore 612, 618
         }

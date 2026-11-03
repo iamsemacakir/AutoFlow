@@ -27,6 +27,7 @@ public sealed class WorkOrderLine : Entity
 
     private WorkOrderLine(
         Guid id,
+        int number,
         WorkOrderLineKind kind,
         string description,
         string? partNumber,
@@ -34,12 +35,19 @@ public sealed class WorkOrderLine : Entity
         decimal unitPrice)
         : base(id)
     {
+        Number = number;
         Kind = kind;
         Description = description;
         PartNumber = partNumber;
         Quantity = quantity;
         UnitPrice = unitPrice;
     }
+
+    /// <summary>
+    /// Position on the work order, starting at 1, as printed on the job card
+    /// and the invoice. Assigned by the work order; lines are listed in this order.
+    /// </summary>
+    public int Number { get; }
 
     public WorkOrderLineKind Kind { get; }
 
@@ -57,18 +65,25 @@ public sealed class WorkOrderLine : Entity
     /// <summary>Quantity × unit price, rounded half away from zero to whole cents.</summary>
     public decimal Total => Math.Round(Quantity * UnitPrice, MoneyDecimals, MidpointRounding.AwayFromZero);
 
-    internal static WorkOrderLine Labour(string description, decimal hours, decimal hourlyRate) =>
+    internal static WorkOrderLine Labour(int number, string description, decimal hours, decimal hourlyRate) =>
         new(
             Guid.NewGuid(),
+            number,
             WorkOrderLineKind.Labour,
             Guard.RequiredText(description, "Description", DescriptionMaxLength),
             partNumber: null,
             EnsureQuantity(hours, "Hours"),
             EnsureUnitPrice(hourlyRate, "Hourly rate"));
 
-    internal static WorkOrderLine Part(string? partNumber, string description, decimal quantity, decimal unitPrice) =>
+    internal static WorkOrderLine Part(
+        int number,
+        string? partNumber,
+        string description,
+        decimal quantity,
+        decimal unitPrice) =>
         new(
             Guid.NewGuid(),
+            number,
             WorkOrderLineKind.Part,
             Guard.RequiredText(description, "Description", DescriptionMaxLength),
             Guard.OptionalText(partNumber, "Part number", PartNumberMaxLength)?.ToUpperInvariant(),

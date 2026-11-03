@@ -18,4 +18,11 @@ internal static class RowVersionExtensions
     public static void ConfigureRowVersion<TEntity>(this EntityTypeBuilder<TEntity> builder)
         where TEntity : class =>
         builder.Property<uint>(PropertyName).IsRowVersion();
+
+    /// <inheritdoc cref="ConfigureRowVersion{TEntity}(EntityTypeBuilder{TEntity})"/>
+    public static void ConfigureRowVersion<TOwner, TDependent>(
+        this OwnedNavigationBuilder<TOwner, TDependent> builder)
+        where TOwner : class
+        where TDependent : class =>
+        builder.Property<uint>(PropertyName).IsRowVersion();
 }

@@ -62,7 +62,8 @@ public sealed class WorkOrder : Entity
 
     public WorkOrderStatus Status { get; private set; }
 
-    public IReadOnlyList<WorkOrderLine> Lines => _lines;
+    /// <summary>The lines in the order they were added (by <see cref="WorkOrderLine.Number"/>).</summary>
+    public IReadOnlyList<WorkOrderLine> Lines => [.. _lines.OrderBy(line => line.Number)];
 
     public DateTimeOffset CreatedAt { get; }
 
@@ -128,11 +129,17 @@ public sealed class WorkOrder : Entity
         Complaint = Guard.RequiredText(complaint, "Complaint", ComplaintMaxLength);
     }
 
-    public WorkOrderLine AddLabour(string description, decimal hours, decimal hourlyRate) =>
-        Add(WorkOrderLine.Labour(description, hours, hourlyRate));
+    public WorkOrderLine AddLabour(string description, decimal hours, decimal hourlyRate)
+    {
+        EnsureCanAddLine();
+        return Add(WorkOrderLine.Labour(NextLineNumber(), description, hours, hourlyRate));
+    }
 
-    public WorkOrderLine AddPart(string? partNumber, string description, decimal quantity, decimal unitPrice) =>
-        Add(WorkOrderLine.Part(partNumber, description, quantity, unitPrice));
+    public WorkOrderLine AddPart(string? partNumber, string description, decimal quantity, decimal unitPrice)
+    {
+        EnsureCanAddLine();
+        return Add(WorkOrderLine.Part(NextLineNumber(), partNumber, description, quantity, unitPrice));
+    }
 
     public void RemoveLine(Guid lineId)
     {
@@ -206,7 +213,7 @@ public sealed class WorkOrder : Entity
         CancelledAt = cancelledAt;
     }
 
-    private WorkOrderLine Add(WorkOrderLine line)
+    private void EnsureCanAddLine()
     {
         EnsureEditable();
 
@@ -214,10 +221,19 @@ public sealed class WorkOrder : Entity
         {
             throw new DomainException($"A work order can have at most {MaxLines} lines.");
         }
+    }
 
+    private WorkOrderLine Add(WorkOrderLine line)
+    {
         _lines.Add(line);
         return line;
     }
+
+    /// <summary>
+    /// One more than the highest number in use, so a line keeps its number
+    /// when an earlier line is removed.
+    /// </summary>
+    private int NextLineNumber() => _lines.Count == 0 ? 1 : _lines.Max(line => line.Number) + 1;
 
     private decimal SumOf(WorkOrderLineKind kind) =>
         _lines.Where(line => line.Kind == kind).Sum(line => line.Total);

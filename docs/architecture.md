@@ -59,17 +59,23 @@ See [ADR 0002](adr/0002-use-case-handlers-and-result-type.md).
 **Infrastructure** — EF Core mappings, migrations, external services.
 See [ADR 0003](adr/0003-ef-core-postgresql-persistence.md).
 
-- `AutoFlowDbContext` is the `IUnitOfWork`; `CustomerRepository` and
-  `VehicleRepository` are internal and only reachable through the
+- `AutoFlowDbContext` is the `IUnitOfWork`; `CustomerRepository`,
+  `VehicleRepository` and `WorkOrderRepository` are internal and only reachable through the
   application interfaces. `AddInfrastructure(connectionString)` wires them up.
 - Mapping is fluent-only (`Persistence/Configurations/`); the domain carries
   no attributes. Value objects are stored through value converters as their
   normalized string.
 - Database names are snake_case and set explicitly: tables `customers`,
-  `vehicles`; keys `pk_*`, foreign keys `fk_*`, indexes `ix_*`, unique indexes
+  `vehicles`, `work_orders`, `work_order_lines`; keys `pk_*`, foreign keys `fk_*`, indexes `ix_*`, unique indexes
   `ux_*`, check constraints `ck_*`.
 - Every table uses PostgreSQL `xmin` as an optimistic concurrency token
   (shadow property `Version`).
+- A child collection of an aggregate is an owned collection (`OwnsMany`) in
+  its own table, loaded and saved only with its root: `work_order_lines`
+  belongs to `work_orders`. Saving a change to the children also updates the
+  root row, so the root's `xmin` is the version of the whole aggregate. Enums
+  are stored by name with an `IN (…)` check constraint. See
+  [ADR 0011](adr/0011-work-order-persistence.md).
 - Read-only queries (searches, lists) use `AsNoTracking`. Customer search
   filters with parameterized SQL (`FromSqlRaw`) because the value-converted
   e-mail column cannot be pattern-matched in LINQ; EF Core composes ordering,
