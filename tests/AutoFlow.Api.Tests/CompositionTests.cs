@@ -24,6 +24,7 @@ public class CompositionTests(WebApplicationFactory<Program> factory)
     [InlineData(typeof(RecordMileageHandler))]
     [InlineData(typeof(TransferVehicleHandler))]
     [InlineData(typeof(IUnitOfWork))]
+    [InlineData(typeof(IWorkOrderRepository))]
     public void Use_case_handlers_and_persistence_resolve_per_request(Type service)
     {
         using var scope = factory.Services.CreateScope();

@@ -1,4 +1,5 @@
 using AutoFlow.Domain.Vehicles;
+using AutoFlow.Domain.WorkOrders;
 using AutoFlow.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -22,6 +23,20 @@ public class ModelTests
 
         Assert.True(index.IsUnique);
         Assert.Equal("ux_vehicles_vin", index.GetDatabaseName());
+    }
+
+    [Fact]
+    public void Work_order_lines_are_owned_by_their_work_order_and_deleted_with_it()
+    {
+        using var db = CreateContext();
+        var line = db.Model.FindEntityType(typeof(WorkOrderLine))!;
+
+        var ownership = line.FindOwnership();
+
+        Assert.NotNull(ownership);
+        Assert.Equal(typeof(WorkOrder), ownership.PrincipalEntityType.ClrType);
+        Assert.Equal(DeleteBehavior.Cascade, ownership.DeleteBehavior);
+        Assert.Equal("work_order_lines", line.GetTableName());
     }
 
     [Fact]

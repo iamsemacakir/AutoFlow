@@ -1,0 +1,29 @@
+name: Scaffold
+on:
+  push:
+    branches: ['scaffold/**']
+permissions:
+  contents: read
+jobs:
+  scaffold:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+      - run: dotnet tool restore
+      - run: dotnet build AutoFlow.slnx -c Release
+      - name: Add migration
+        run: dotnet ef migrations add AddWorkOrders --project src/AutoFlow.Infrastructure --output-dir Persistence/Migrations
+      - name: Dump migration
+        run: |
+          git status --short
+          tar czf - src/AutoFlow.Infrastructure/Persistence/Migrations | base64 -w0 > m.b64
+          echo "BEGIN_B64"
+          fold -w 4000 m.b64
+          echo
+          echo "END_B64"
+      - name: Test
+        run: dotnet test AutoFlow.slnx -c Release

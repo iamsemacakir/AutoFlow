@@ -1,5 +1,6 @@
 using AutoFlow.Domain.Customers;
 using AutoFlow.Domain.Vehicles;
+using AutoFlow.Domain.WorkOrders;
 
 namespace AutoFlow.Infrastructure.Tests;
 
@@ -29,4 +30,7 @@ internal static class TestData
             2019,
             50_000,
             registeredAt ?? Now);
+
+    public static WorkOrder WorkOrder(Guid vehicleId, Guid customerId) =>
+        Domain.WorkOrders.WorkOrder.Open(vehicleId, customerId, "Squeaking brakes at the front", 62_500, Now);
 }

@@ -228,6 +228,33 @@ public class WorkOrderTests
     }
 
     [Fact]
+    public void Lines_are_numbered_in_the_order_they_were_added()
+    {
+        var workOrder = NewDraft();
+
+        var labour = workOrder.AddLabour("Replace front brake pads", 1.5m, 95m);
+        var part = workOrder.AddPart("BP-12", "Brake pads, front", 1m, 64m);
+
+        Assert.Equal(1, labour.Number);
+        Assert.Equal(2, part.Number);
+        Assert.Equal(new[] { 1, 2 }, workOrder.Lines.Select(l => l.Number));
+    }
+
+    [Fact]
+    public void RemoveLine_keeps_the_numbers_of_the_remaining_lines()
+    {
+        var workOrder = NewDraft();
+        var first = workOrder.AddLabour("Diagnosis", 0.5m, 95m);
+        workOrder.AddPart(null, "Bulb H7", 1m, 6.50m);
+
+        workOrder.RemoveLine(first.Id);
+        var added = workOrder.AddPart(null, "Wiper blades", 1m, 29.90m);
+
+        Assert.Equal(new[] { 2, 3 }, workOrder.Lines.Select(l => l.Number));
+        Assert.Equal(3, added.Number);
+    }
+
+    [Fact]
     public void RemoveLine_rejects_unknown_line()
     {
         var workOrder = NewDraftWithLine();

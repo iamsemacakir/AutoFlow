@@ -47,6 +47,11 @@ public class MigrationTests
         Assert.Contains("CREATE UNIQUE INDEX ux_vehicles_vin", script, StringComparison.Ordinal);
         Assert.Contains("CONSTRAINT fk_vehicles_customers_customer_id", script, StringComparison.Ordinal);
         Assert.Contains("CONSTRAINT ck_vehicles_mileage_km_non_negative", script, StringComparison.Ordinal);
+        Assert.Contains("CREATE TABLE work_orders", script, StringComparison.Ordinal);
+        Assert.Contains("CREATE TABLE work_order_lines", script, StringComparison.Ordinal);
+        Assert.Contains("CREATE UNIQUE INDEX ux_work_order_lines_work_order_id_number", script, StringComparison.Ordinal);
+        Assert.Contains("CONSTRAINT fk_work_order_lines_work_orders_work_order_id", script, StringComparison.Ordinal);
+        Assert.Contains("CONSTRAINT ck_work_orders_status", script, StringComparison.Ordinal);
         // xmin is a PostgreSQL system column and must never be created explicitly.
         Assert.DoesNotContain("xmin xid", script, StringComparison.Ordinal);
     }
