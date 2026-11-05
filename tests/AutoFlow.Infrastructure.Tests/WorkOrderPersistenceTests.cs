@@ -180,6 +180,42 @@ public class WorkOrderPersistenceTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task ListByVehicleAsync_pages_newest_first_with_lines_and_without_tracking()
+    {
+        var (customer, vehicle) = await SeedVehicleAsync();
+        var (_, otherVehicle) = await SeedVehicleAsync();
+        var created = Enumerable.Range(0, 3)
+            .Select(day => WorkOrder.Open(vehicle.Id, customer.Id, $"Visit {day}", 50_000, TestData.Now.AddDays(day)))
+            .ToList();
+        created[2].AddLabour("Diagnosis", 0.5m, 95m);
+        created[2].AddPart(null, "Bulb H7", 1m, 6.50m);
+
+        await using (var seedDb = postgres.CreateContext())
+        {
+            seedDb.WorkOrders.AddRange(created);
+            seedDb.WorkOrders.Add(TestData.WorkOrder(otherVehicle.Id, customer.Id));
+            await seedDb.SaveChangesAsync();
+        }
+
+        await using var db = postgres.CreateContext();
+        var repository = new WorkOrderRepository(db);
+        var firstPage = await repository.ListByVehicleAsync(vehicle.Id, page: 1, pageSize: 2);
+        var secondPage = await repository.ListByVehicleAsync(vehicle.Id, page: 2, pageSize: 2);
+
+        Assert.Equal(3, firstPage.TotalCount);
+        Assert.Collection(
+            firstPage.Items,
+            newest => Assert.Equal("Visit 2", newest.Complaint),
+            older => Assert.Equal("Visit 1", older.Complaint));
+        Assert.Equal("Visit 0", Assert.Single(secondPage.Items).Complaint);
+        Assert.Collection(
+            firstPage.Items[0].Lines,
+            line => Assert.Equal("Diagnosis", line.Description),
+            line => Assert.Equal("Bulb H7", line.Description));
+        Assert.Empty(db.ChangeTracker.Entries());
+    }
+
+    [Fact]
     public async Task Foreign_key_rejects_a_work_order_for_an_unknown_vehicle()
     {
         var customer = await SeedCustomerAsync();

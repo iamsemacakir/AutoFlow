@@ -29,7 +29,8 @@ Early foundation. See [ROADMAP.md](ROADMAP.md) for what is done and what comes n
 | Work orders: open use case (intake reading, current owner) | ✅ |
 | Work orders: add/remove labour and part lines use cases | ✅ |
 | Work orders: approve, start, complete, cancel use cases | ✅ |
-| Work orders: remaining use cases, endpoints | ⏳ next |
+| Work orders: get, paged history per vehicle | ✅ |
+| Work orders: endpoints | ⏳ next |
 | Appointments, invoices | ⏳ planned |
 | Auth, UI, deployment | ⏳ planned |
 

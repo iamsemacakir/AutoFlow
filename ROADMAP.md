@@ -38,7 +38,7 @@ updated docs. Steps are done in order unless a dependency forces otherwise.
 
 - [x] `WorkOrder` aggregate: status flow (Draft → Approved → InProgress → Completed → Invoiced, plus Cancelled), labour and part lines, net totals
 - [x] Persistence: work order and line tables, migration, version bump on line changes, `IWorkOrderRepository`
-- [ ] Use cases: open (from the vehicle's current owner) ✅, edit lines (add labour/part, remove) ✅, approve, start, complete, cancel ✅, list per vehicle
+- [x] Use cases: open (from the vehicle's current owner), edit lines (add labour/part, remove), approve, start, complete, cancel, get, list per vehicle (paged, newest first)
 - [ ] Endpoints and tests
 
 ## Milestone 5 — Appointments

@@ -14,11 +14,11 @@ internal static class TestData
     public static Vehicle Vehicle(Guid customerId, string vin = Vin, int mileageKm = 50_000) =>
         Domain.Vehicles.Vehicle.Register(customerId, vin, "M-AB 123", "Volkswagen", "Golf", 2019, mileageKm, FixedTimeProvider.Default);
 
-    public static WorkOrder WorkOrder(Vehicle vehicle) =>
+    public static WorkOrder WorkOrder(Vehicle vehicle, DateTimeOffset? createdAt = null) =>
         Domain.WorkOrders.WorkOrder.Open(
             vehicle.Id,
             vehicle.CustomerId,
             "Squeaking brakes at the front",
             vehicle.MileageKm,
-            FixedTimeProvider.Default);
+            createdAt ?? FixedTimeProvider.Default);
 }

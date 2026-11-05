@@ -1,3 +1,4 @@
+using AutoFlow.Application.Common;
 using AutoFlow.Domain.WorkOrders;
 
 namespace AutoFlow.Application.Abstractions;
@@ -18,6 +19,17 @@ public interface IWorkOrderRepository
     /// orders stay with that customer even after the vehicle is sold.
     /// </summary>
     Task<bool> ExistsForCustomerAsync(Guid customerId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns one page of a vehicle's work orders, newest first (by creation
+    /// time, then id), each with its lines. The returned entities are
+    /// read-only snapshots and are not tracked.
+    /// </summary>
+    Task<PagedList<WorkOrder>> ListByVehicleAsync(
+        Guid vehicleId,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default);
 
     void Add(WorkOrder workOrder);
 }

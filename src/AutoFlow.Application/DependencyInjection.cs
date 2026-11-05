@@ -37,6 +37,8 @@ public static class DependencyInjection
         services.AddScoped<StartWorkOrderHandler>();
         services.AddScoped<CompleteWorkOrderHandler>();
         services.AddScoped<CancelWorkOrderHandler>();
+        services.AddScoped<GetWorkOrderHandler>();
+        services.AddScoped<ListVehicleWorkOrdersHandler>();
 
         return services;
     }

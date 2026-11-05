@@ -118,5 +118,24 @@ public sealed class InMemoryStore : IUnitOfWork, ICustomerRepository, IVehicleRe
     Task<bool> IWorkOrderRepository.ExistsForCustomerAsync(Guid customerId, CancellationToken cancellationToken) =>
         Task.FromResult(_workOrders.Values.Any(w => w.CustomerId == customerId));
 
+    public Task<PagedList<WorkOrder>> ListByVehicleAsync(
+        Guid vehicleId,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var ofVehicle = _workOrders.Values
+            .Where(w => w.VehicleId == vehicleId)
+            .OrderByDescending(w => w.CreatedAt)
+            .ThenBy(w => w.Id)
+            .ToList();
+
+        return Task.FromResult(new PagedList<WorkOrder>(
+            [.. ofVehicle.Skip(Paging.Offset(page, pageSize)).Take(pageSize)],
+            page,
+            pageSize,
+            ofVehicle.Count));
+    }
+
     public void Add(WorkOrder workOrder) => _pendingWorkOrders.Add(workOrder);
 }

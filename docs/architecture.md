@@ -68,6 +68,8 @@ See [ADR 0002](adr/0002-use-case-handlers-and-result-type.md).
   (`Paging.DefaultPageSize` 20, `Paging.MaxPageSize` 100, checked by
   `Paging.Validate`) and return a `PagedList<T>` with the total count.
   See [ADR 0006](adr/0006-customer-endpoints-paging-search-delete.md).
+  A vehicle's work order history is paged too, newest first, and includes
+  work orders commissioned by earlier owners.
 - `AddApplication()` registers the handlers (scoped) and `TimeProvider.System`
   unless another `TimeProvider` was registered first.
 
@@ -91,7 +93,8 @@ See [ADR 0003](adr/0003-ef-core-postgresql-persistence.md).
   root row, so the root's `xmin` is the version of the whole aggregate. Enums
   are stored by name with an `IN (…)` check constraint. See
   [ADR 0011](adr/0011-work-order-persistence.md).
-- Read-only queries (searches, lists) use `AsNoTracking`. Customer search
+- Read-only queries (searches, lists) use `AsNoTracking`; owned children
+  come with their root (`ListByVehicleAsync` returns work orders with lines). Customer search
   filters with parameterized SQL (`FromSqlRaw`) because the value-converted
   e-mail column cannot be pattern-matched in LINQ; EF Core composes ordering,
   paging and counting on top.
