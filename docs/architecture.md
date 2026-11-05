@@ -50,6 +50,11 @@ See [ADR 0002](adr/0002-use-case-handlers-and-result-type.md).
 - A use case may change two aggregates in one commit when the business step
   does: `OpenWorkOrderHandler` records the intake odometer reading on the
   vehicle and opens the work order (for the vehicle's current owner) together.
+- A child entity is changed only through its aggregate's use cases
+  (`AddLabourLineHandler`, `AddPartLineHandler`, `RemoveWorkOrderLineHandler`
+  load the `WorkOrder` and return the whole `WorkOrderDetails`, since totals
+  change with every line). A child id that the aggregate does not contain is
+  a lookup failure (`work_order.line_not_found`, 404), not a broken rule.
 - Errors carry a stable `Code` (`customer.not_found`, `vehicle.duplicate_vin`)
   and an `ErrorKind` that the API maps to HTTP status codes
   (Validation → 400, NotFound → 404, Conflict → 409).

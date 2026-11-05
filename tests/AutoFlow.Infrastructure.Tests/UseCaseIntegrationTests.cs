@@ -85,6 +85,33 @@ public sealed class UseCaseIntegrationTests : IDisposable
         Assert.Equal(45_300, storedVehicle.MileageKm);
     }
 
+    [Fact]
+    public async Task Lines_added_and_removed_in_separate_requests_are_stored_with_the_work_order()
+    {
+        var customer = await InScope<RegisterCustomerHandler, CustomerDetails>(handler =>
+            handler.HandleAsync(new RegisterCustomerCommand("Paul", "Richter", "paul@example.com", null)));
+        var vehicle = await InScope<RegisterVehicleHandler, VehicleDetails>(handler =>
+            handler.HandleAsync(new RegisterVehicleCommand(customer.Id, TestData.UniqueVin(), "H-PR 9", "Skoda", "Octavia", 2017, 120_000)));
+        var opened = await InScope<OpenWorkOrderHandler, WorkOrderDetails>(handler =>
+            handler.HandleAsync(new OpenWorkOrderCommand(vehicle.Id, "Brakes grinding")));
+
+        var withLabour = await InScope<AddLabourLineHandler, WorkOrderDetails>(handler =>
+            handler.HandleAsync(new AddLabourLineCommand(opened.Id, "Diagnosis", 0.5m, 95m)));
+        await InScope<AddPartLineHandler, WorkOrderDetails>(handler =>
+            handler.HandleAsync(new AddPartLineCommand(opened.Id, "bp-12", "Brake pads, front", 1m, 64m)));
+        await InScope<RemoveWorkOrderLineHandler, WorkOrderDetails>(handler =>
+            handler.HandleAsync(new RemoveWorkOrderLineCommand(opened.Id, withLabour.Lines[0].Id)));
+
+        using var scope = _provider.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AutoFlowDbContext>();
+        var stored = await db.WorkOrders.SingleAsync(w => w.Id == opened.Id);
+
+        var line = Assert.Single(stored.Lines);
+        Assert.Equal(2, line.Number);
+        Assert.Equal("BP-12", line.PartNumber);
+        Assert.Equal(64m, stored.Total);
+    }
+
     public void Dispose() => _provider.Dispose();
 
     private async Task<TOut> InScope<THandler, TOut>(Func<THandler, Task<Result<TOut>>> call)

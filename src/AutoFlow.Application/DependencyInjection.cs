@@ -30,6 +30,9 @@ public static class DependencyInjection
         services.AddScoped<GetVehicleHandler>();
         services.AddScoped<ListCustomerVehiclesHandler>();
         services.AddScoped<OpenWorkOrderHandler>();
+        services.AddScoped<AddLabourLineHandler>();
+        services.AddScoped<AddPartLineHandler>();
+        services.AddScoped<RemoveWorkOrderLineHandler>();
 
         return services;
     }

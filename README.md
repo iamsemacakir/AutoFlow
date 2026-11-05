@@ -27,6 +27,7 @@ Early foundation. See [ROADMAP.md](ROADMAP.md) for what is done and what comes n
 | Work orders: domain aggregate, status flow, labour/part lines | ✅ |
 | Work orders: persistence (lines table, migration, concurrency) | ✅ |
 | Work orders: open use case (intake reading, current owner) | ✅ |
+| Work orders: add/remove labour and part lines use cases | ✅ |
 | Work orders: remaining use cases, endpoints | ⏳ next |
 | Appointments, invoices | ⏳ planned |
 | Auth, UI, deployment | ⏳ planned |
