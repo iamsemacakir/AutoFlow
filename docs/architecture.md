@@ -55,6 +55,12 @@ See [ADR 0002](adr/0002-use-case-handlers-and-result-type.md).
   load the `WorkOrder` and return the whole `WorkOrderDetails`, since totals
   change with every line). A child id that the aggregate does not contain is
   a lookup failure (`work_order.line_not_found`, 404), not a broken rule.
+- A status change is one use case per domain transition
+  (`ApproveWorkOrderHandler`, `StartWorkOrderHandler`,
+  `CompleteWorkOrderHandler`, `CancelWorkOrderHandler`), stamped with
+  `TimeProvider.GetUtcNow()`. The handler does not pre-check the current
+  status: an illegal transition is the aggregate's `DomainException` (422).
+  `MarkInvoiced` gets no use case of its own; issuing an invoice will call it.
 - Errors carry a stable `Code` (`customer.not_found`, `vehicle.duplicate_vin`)
   and an `ErrorKind` that the API maps to HTTP status codes
   (Validation → 400, NotFound → 404, Conflict → 409).

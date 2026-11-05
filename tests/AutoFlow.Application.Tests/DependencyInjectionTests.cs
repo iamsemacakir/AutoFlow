@@ -41,6 +41,10 @@ public class DependencyInjectionTests
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<AddLabourLineHandler>());
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<AddPartLineHandler>());
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<RemoveWorkOrderLineHandler>());
+        Assert.NotNull(scope.ServiceProvider.GetRequiredService<ApproveWorkOrderHandler>());
+        Assert.NotNull(scope.ServiceProvider.GetRequiredService<StartWorkOrderHandler>());
+        Assert.NotNull(scope.ServiceProvider.GetRequiredService<CompleteWorkOrderHandler>());
+        Assert.NotNull(scope.ServiceProvider.GetRequiredService<CancelWorkOrderHandler>());
         Assert.Same(TimeProvider.System, provider.GetRequiredService<TimeProvider>());
     }
 
