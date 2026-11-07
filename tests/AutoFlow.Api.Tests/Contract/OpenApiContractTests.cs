@@ -33,6 +33,9 @@ public sealed class OpenApiContractTests(WebApplicationFactory<Program> factory)
         { "ListVehicleWorkOrders", "GET", "/api/vehicles/{vehicleId}/work-orders", "200 400 404" },
         { "OpenWorkOrder", "POST", "/api/vehicles/{vehicleId}/work-orders", "201 400 404 409 422" },
         { "GetWorkOrder", "GET", "/api/work-orders/{id}", "200 404" },
+        { "AddLabourLine", "POST", "/api/work-orders/{id}/labour-lines", "200 400 404 409 422" },
+        { "AddPartLine", "POST", "/api/work-orders/{id}/part-lines", "200 400 404 409 422" },
+        { "RemoveWorkOrderLine", "DELETE", "/api/work-orders/{id}/lines/{lineId}", "200 404 409 422" },
     };
 
     [Theory]

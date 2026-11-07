@@ -31,7 +31,8 @@ Early foundation. See [ROADMAP.md](ROADMAP.md) for what is done and what comes n
 | Work orders: approve, start, complete, cancel use cases | ✅ |
 | Work orders: get, paged history per vehicle | ✅ |
 | Work orders: open, get, history endpoints | ✅ |
-| Work orders: line and status endpoints | ⏳ next |
+| Work orders: add/remove line endpoints | ✅ |
+| Work orders: status endpoints | ⏳ next |
 | Appointments, invoices | ⏳ planned |
 | Auth, UI, deployment | ⏳ planned |
 
@@ -119,6 +120,15 @@ curl -s -X PUT localhost:5080/api/vehicles/<vehicle-id>/mileage -H 'Content-Type
 | `GET /api/vehicles/{vehicleId}/work-orders?page=1&pageSize=20` | A vehicle's service history, newest first, including work orders of former owners | 200, 400, 404 |
 | `POST /api/vehicles/{vehicleId}/work-orders` | Open a draft for the vehicle's current owner (`complaint`, `mileageKm?`); a given reading is also recorded on the vehicle | 201 + `Location`, 400, 404, 409, 422 |
 | `GET /api/work-orders/{id}` | Get one work order with its lines and totals | 200, 404 |
+| `POST /api/work-orders/{id}/labour-lines` | Add labour (`description`, `hours`, `hourlyRate`) | 200, 400, 404, 409, 422 |
+| `POST /api/work-orders/{id}/part-lines` | Add a part (`partNumber?`, `description`, `quantity`, `unitPrice`) | 200, 400, 404, 409, 422 |
+| `DELETE /api/work-orders/{id}/lines/{lineId}` | Remove a line; the other lines keep their numbers | 200, 404, 409, 422 |
+
+Amounts are net, in the workshop's currency: quantities and hours have at
+most two decimals, prices are whole cents, and each line total is rounded half
+away from zero to cents. Lines have no URL of their own; every line change
+answers with the whole work order and its new totals. Lines can be changed
+until the work order is completed (422 afterwards).
 
 The endpoint tables above are pinned by
 `OpenApiContractTests` against `/openapi/v1.json`; change both together.
@@ -134,7 +144,7 @@ stable `code` to switch on:
 | 400 | `validation.failed` (+ `errors` per field) | body fields missing, blank, too long or out of range |
 | 400 | `request.malformed` | unreadable JSON, wrong value type, unparsable query/route value |
 | 400 | `paging.invalid_page`, `paging.invalid_page_size` | paging out of range |
-| 404 | `customer.not_found`, `vehicle.not_found`, `work_order.not_found` / `route.not_found` | unknown resource / unknown URL |
+| 404 | `customer.not_found`, `vehicle.not_found`, `work_order.not_found`, `work_order.line_not_found` / `route.not_found` | unknown resource / unknown URL |
 | 405, 415 | `request.method_not_allowed`, `request.unsupported_media_type` | wrong method, non-JSON body |
 | 409 | `customer.has_vehicles`, `customer.has_work_orders`, `vehicle.duplicate_vin`, `conflict.duplicate`, `conflict.concurrent_update` | conflicts |
 | 422 | `domain.rule_violated` | business rule broken |

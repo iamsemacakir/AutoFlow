@@ -98,4 +98,18 @@ public sealed class ValidationErrorsTests
             new[] { "complaint", "mileageKm" },
             withoutComplaint.ToDictionary().Keys.Order(StringComparer.Ordinal).ToArray());
     }
+
+    [Fact]
+    public void Line_requests_report_missing_numbers_but_leave_their_range_to_the_domain()
+    {
+        var missing = new ValidationErrors();
+        new LabourLineRequest("Brake pads", null, null).Validate(missing);
+        Assert.Equal(
+            new[] { "hourlyRate", "hours" },
+            missing.ToDictionary().Keys.Order(StringComparer.Ordinal).ToArray());
+
+        var outOfRange = new ValidationErrors();
+        new PartLineRequest(null, "Brake pad set", -1m, 0.001m).Validate(outOfRange);
+        Assert.True(outOfRange.IsEmpty);
+    }
 }

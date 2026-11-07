@@ -68,6 +68,18 @@ public sealed class ValidationErrors
         }
     }
 
+    /// <summary>
+    /// The value must be present. Ranges and precision of amounts are domain
+    /// rules (422), so only a missing number is a request-shape error.
+    /// </summary>
+    public void RequireNumber(string field, decimal? value)
+    {
+        if (value is null)
+        {
+            Add(field, $"'{field}' is required.");
+        }
+    }
+
     /// <summary>The value must be present and not the empty id.</summary>
     public void RequireId(string field, Guid? value)
     {
