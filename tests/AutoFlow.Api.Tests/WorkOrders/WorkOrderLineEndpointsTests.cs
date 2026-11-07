@@ -67,7 +67,7 @@ public sealed class WorkOrderLineEndpointsTests : IDisposable
         await AssertProblemAsync(response, HttpStatusCode.BadRequest, "validation.failed");
         using var problem = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         var fields = problem.RootElement.GetProperty("errors").EnumerateObject().Select(field => field.Name);
-        Assert.Equal(new[] { "description", "quantity", "unitPrice" }, fields.Order(StringComparer.Ordinal).ToArray());
+        Assert.Equal("description quantity unitPrice", string.Join(' ', fields.Order(StringComparer.Ordinal)));
     }
 
     [Fact]
@@ -111,7 +111,7 @@ public sealed class WorkOrderLineEndpointsTests : IDisposable
         Assert.Equal(120m, updated.Total);
 
         var withNext = await AddLabourAsync(workOrder.Id, "Test drive", 0.25m);
-        Assert.Equal(new[] { 2, 3 }, withNext.Lines.Select(line => line.Number).ToArray());
+        Assert.Equal("2 3", string.Join(' ', withNext.Lines.Select(line => line.Number)));
     }
 
     [Fact]

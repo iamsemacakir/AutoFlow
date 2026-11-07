@@ -95,8 +95,8 @@ public sealed class ValidationErrorsTests
         var withoutComplaint = new ValidationErrors();
         new OpenWorkOrderRequest("  ", -5).Validate(withoutComplaint);
         Assert.Equal(
-            new[] { "complaint", "mileageKm" },
-            withoutComplaint.ToDictionary().Keys.Order(StringComparer.Ordinal).ToArray());
+            "complaint mileageKm",
+            string.Join(' ', withoutComplaint.ToDictionary().Keys.Order(StringComparer.Ordinal)));
     }
 
     [Fact]
@@ -104,9 +104,7 @@ public sealed class ValidationErrorsTests
     {
         var missing = new ValidationErrors();
         new LabourLineRequest("Brake pads", null, null).Validate(missing);
-        Assert.Equal(
-            new[] { "hourlyRate", "hours" },
-            missing.ToDictionary().Keys.Order(StringComparer.Ordinal).ToArray());
+        Assert.Equal("hourlyRate hours", string.Join(' ', missing.ToDictionary().Keys.Order(StringComparer.Ordinal)));
 
         var outOfRange = new ValidationErrors();
         new PartLineRequest(null, "Brake pad set", -1m, 0.001m).Validate(outOfRange);

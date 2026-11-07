@@ -67,7 +67,7 @@ public sealed class WorkOrderWorkflowTests : IDisposable
 
         var final = (await _client.GetFromJsonAsync<WorkOrderDetails>(workOrderUrl))!;
         Assert.Equal(("Completed", 48_950, 304.4m), (final.Status, final.MileageKmAtIntake, final.Total));
-        Assert.Equal(new[] { 1, 2, 3 }, final.Lines.Select(line => line.Number).ToArray());
+        Assert.Equal("1 2 3", string.Join(' ', final.Lines.Select(line => line.Number)));
         Assert.True(final.ApprovedAt <= final.StartedAt && final.StartedAt <= final.CompletedAt);
 
         // 6. The vehicle's history shows the job; the customer cannot be deleted
