@@ -1,6 +1,7 @@
 using AutoFlow.Api.Customers;
 using AutoFlow.Api.Validation;
 using AutoFlow.Api.Vehicles;
+using AutoFlow.Api.WorkOrders;
 
 namespace AutoFlow.Api.Tests.Validation;
 
@@ -69,5 +70,32 @@ public sealed class ValidationErrorsTests
         new MileageRequest(0).Validate(errors);
 
         Assert.True(errors.IsEmpty);
+    }
+
+    [Fact]
+    public void OptionalAtLeast_ignores_a_missing_value_and_rejects_one_below_the_minimum()
+    {
+        var errors = new ValidationErrors();
+
+        errors.OptionalAtLeast("mileageKm", null, 0);
+        errors.OptionalAtLeast("mileageKm", 0, 0);
+        Assert.True(errors.IsEmpty);
+
+        errors.OptionalAtLeast("mileageKm", -1, 0);
+        Assert.Equal("'mileageKm' must be 0 or greater.", Assert.Single(errors.ToDictionary()["mileageKm"]));
+    }
+
+    [Fact]
+    public void Open_work_order_request_needs_a_complaint_but_no_mileage()
+    {
+        var withoutMileage = new ValidationErrors();
+        new OpenWorkOrderRequest("Brakes squeal", null).Validate(withoutMileage);
+        Assert.True(withoutMileage.IsEmpty);
+
+        var withoutComplaint = new ValidationErrors();
+        new OpenWorkOrderRequest("  ", -5).Validate(withoutComplaint);
+        Assert.Equal(
+            new[] { "complaint", "mileageKm" },
+            withoutComplaint.ToDictionary().Keys.Order(StringComparer.Ordinal).ToArray());
     }
 }

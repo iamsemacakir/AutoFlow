@@ -113,7 +113,7 @@ authentication. Business rules do not live here.
   result; failures go through `Error.ToProblem()`, which writes an RFC 9457
   problem with the status from the `ErrorKind` and the error code in `code`.
 - Responses are the application read models (`CustomerDetails`,
-  `PagedList<CustomerDetails>`, `VehicleDetails`); request bodies are API
+  `PagedList<CustomerDetails>`, `VehicleDetails`, `WorkOrderDetails`); request bodies are API
   records (`CustomerRequest`, `VehicleRequest`). `POST` answers 201 with a
   `Location` header, `DELETE` answers 204.
 - A resource that belongs to another is created and listed under its parent
@@ -122,6 +122,9 @@ authentication. Business rules do not live here.
   changes that are not plain replacement get their own path: an idempotent
   value with `PUT` (`/mileage`), a one-off action with `POST` (`/transfer`).
   See [ADR 0007](adr/0007-vehicle-endpoints.md).
+  Work orders follow the same pattern under `/api/vehicles/{vehicleId}/work-orders`
+  (open, paged history) and `/api/work-orders/{id}`. See
+  [ADR 0012](adr/0012-work-order-endpoints.md).
 - Request records implement `IValidatableRequest` and check their shape
   (required, length, simple bounds, using the domain's constants); each
   endpoint group calls `WithRequestValidation()`, whose filter answers 400

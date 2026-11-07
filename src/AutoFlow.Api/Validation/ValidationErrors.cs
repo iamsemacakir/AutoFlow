@@ -59,6 +59,15 @@ public sealed class ValidationErrors
         }
     }
 
+    /// <summary>The value may be missing; if given it must be at least <paramref name="minimum"/>.</summary>
+    public void OptionalAtLeast(string field, int? value, int minimum)
+    {
+        if (value < minimum)
+        {
+            Add(field, $"'{field}' must be {minimum} or greater.");
+        }
+    }
+
     /// <summary>The value must be present and not the empty id.</summary>
     public void RequireId(string field, Guid? value)
     {

@@ -2,6 +2,8 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using AutoFlow.Application.Customers;
+using AutoFlow.Application.Vehicles;
+using AutoFlow.Application.WorkOrders;
 
 namespace AutoFlow.Api.Tests;
 
@@ -23,6 +25,23 @@ internal static class ApiTestHelpers
             new { firstName, lastName, email = $"{firstName}@example.com" });
         response.EnsureSuccessStatusCode();
         return (await response.Content.ReadFromJsonAsync<CustomerDetails>())!;
+    }
+
+    public static async Task<VehicleDetails> RegisterVehicleAsync(this HttpClient client, Guid customerId, int mileageKm = 30_000)
+    {
+        using var response = await client.PostAsJsonAsync(
+            Url($"/api/customers/{customerId}/vehicles"),
+            new { vin = UniqueVin(), licensePlate = "B-JB 42", make = "BMW", model = "320d", modelYear = 2021, mileageKm });
+        response.EnsureSuccessStatusCode();
+        return (await response.Content.ReadFromJsonAsync<VehicleDetails>())!;
+    }
+
+    public static async Task<WorkOrderDetails> OpenWorkOrderAsync(
+        this HttpClient client, Guid vehicleId, string complaint = "Annual service")
+    {
+        using var response = await client.PostAsJsonAsync(Url($"/api/vehicles/{vehicleId}/work-orders"), new { complaint });
+        response.EnsureSuccessStatusCode();
+        return (await response.Content.ReadFromJsonAsync<WorkOrderDetails>())!;
     }
 
     /// <summary>PostgreSQL stores microseconds, .NET timestamps have 100 ns ticks.</summary>

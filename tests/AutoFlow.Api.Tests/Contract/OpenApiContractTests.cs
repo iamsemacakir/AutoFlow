@@ -30,6 +30,9 @@ public sealed class OpenApiContractTests(WebApplicationFactory<Program> factory)
         { "GetVehicle", "GET", "/api/vehicles/{id}", "200 404" },
         { "RecordMileage", "PUT", "/api/vehicles/{id}/mileage", "200 400 404 409 422" },
         { "TransferVehicle", "POST", "/api/vehicles/{id}/transfer", "200 400 404 409 422" },
+        { "ListVehicleWorkOrders", "GET", "/api/vehicles/{vehicleId}/work-orders", "200 400 404" },
+        { "OpenWorkOrder", "POST", "/api/vehicles/{vehicleId}/work-orders", "201 400 404 409 422" },
+        { "GetWorkOrder", "GET", "/api/work-orders/{id}", "200 404" },
     };
 
     [Theory]
@@ -88,6 +91,11 @@ public sealed class OpenApiContractTests(WebApplicationFactory<Program> factory)
     [Theory]
     [InlineData("CustomerDetails", "createdAt email firstName id lastName phoneNumber")]
     [InlineData("VehicleDetails", "customerId id licensePlate make mileageKm model modelYear registeredAt vin")]
+    [InlineData(
+        "WorkOrderDetails",
+        "approvedAt approvedTotal cancellationReason cancelledAt complaint completedAt createdAt customerId id " +
+        "invoicedAt labourTotal lines mileageKmAtIntake partsTotal startedAt status total vehicleId")]
+    [InlineData("WorkOrderLineDetails", "description id kind number partNumber quantity total unitPrice")]
     public async Task Read_models_are_documented_with_camel_case_properties(string schema, string properties)
     {
         using var document = await LoadDocumentAsync();

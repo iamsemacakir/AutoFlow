@@ -1,6 +1,7 @@
 using AutoFlow.Api.Customers;
 using AutoFlow.Api.Errors;
 using AutoFlow.Api.Vehicles;
+using AutoFlow.Api.WorkOrders;
 using AutoFlow.Application;
 using AutoFlow.Infrastructure;
 
@@ -44,6 +45,7 @@ app.MapHealthChecks("/health");
 
 app.MapCustomerEndpoints();
 app.MapVehicleEndpoints();
+app.MapWorkOrderEndpoints();
 
 app.MapGet("/", () => Results.Ok(new { name = "AutoFlow API", status = "running" }))
     .WithName("GetApiInfo")
