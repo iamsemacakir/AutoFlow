@@ -53,13 +53,26 @@ public sealed record PartLineRequest(string? PartNumber, string? Description, de
     }
 }
 
+/// <summary>Request body for cancelling a draft or approved work order.</summary>
+public sealed record CancelWorkOrderRequest(string? Reason) : IValidatableRequest
+{
+    public void Validate(ValidationErrors errors)
+    {
+        ArgumentNullException.ThrowIfNull(errors);
+
+        errors.RequireText("reason", Reason, WorkOrder.CancellationReasonMaxLength);
+    }
+}
+
 /// <summary>
 /// Work orders as a sub-resource of the vehicle they are for
 /// (<c>/api/vehicles/{vehicleId}/work-orders</c>: service history, open) and
 /// as a resource of their own (<c>/api/work-orders/{id}</c>). A work order
 /// stays at its URL for good, whatever happens to the vehicle. Lines have no
 /// URL of their own: they are added and removed through their work order, and
-/// every line change answers with the whole updated work order. See ADR 0012.
+/// every line change answers with the whole updated work order. Each status
+/// transition is an action of its own (<c>/approve</c>, <c>/start</c>,
+/// <c>/complete</c>, <c>/cancel</c>); an illegal one answers 422. See ADR 0012.
 /// </summary>
 internal static class WorkOrderEndpoints
 {
@@ -121,6 +134,23 @@ internal static class WorkOrderEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict)
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
+
+        MapTransition(workOrders, "/{id:guid}/approve", ApproveWorkOrder)
+            .WithName("ApproveWorkOrder")
+            .WithSummary("The customer agrees to the estimate of a draft; its total becomes the approved total.");
+
+        MapTransition(workOrders, "/{id:guid}/start", StartWorkOrder)
+            .WithName("StartWorkOrder")
+            .WithSummary("A mechanic starts work on an approved work order.");
+
+        MapTransition(workOrders, "/{id:guid}/complete", CompleteWorkOrder)
+            .WithName("CompleteWorkOrder")
+            .WithSummary("Marks the work as done; from then on the lines are final.");
+
+        MapTransition(workOrders, "/{id:guid}/cancel", CancelWorkOrder)
+            .WithName("CancelWorkOrder")
+            .WithSummary("Cancels a draft or approved work order, with a reason.")
+            .ProducesValidationProblem();
 
         return app;
     }
@@ -202,6 +232,55 @@ internal static class WorkOrderEndpoints
         CancellationToken cancellationToken)
     {
         var result = await handler.HandleAsync(new RemoveWorkOrderLineCommand(id, lineId), cancellationToken);
+
+        return result.Match(value => Results.Ok(value), error => error.ToProblem());
+    }
+
+    /// <summary>Every status change answers the same way: the updated work order, or why it was refused.</summary>
+    private static RouteHandlerBuilder MapTransition(RouteGroupBuilder group, string pattern, Delegate handler) =>
+        group.MapPost(pattern, handler)
+            .Produces<WorkOrderDetails>()
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
+
+    private static async Task<IResult> ApproveWorkOrder(
+        Guid id,
+        ApproveWorkOrderHandler handler,
+        CancellationToken cancellationToken)
+    {
+        var result = await handler.HandleAsync(new ApproveWorkOrderCommand(id), cancellationToken);
+
+        return result.Match(value => Results.Ok(value), error => error.ToProblem());
+    }
+
+    private static async Task<IResult> StartWorkOrder(
+        Guid id,
+        StartWorkOrderHandler handler,
+        CancellationToken cancellationToken)
+    {
+        var result = await handler.HandleAsync(new StartWorkOrderCommand(id), cancellationToken);
+
+        return result.Match(value => Results.Ok(value), error => error.ToProblem());
+    }
+
+    private static async Task<IResult> CompleteWorkOrder(
+        Guid id,
+        CompleteWorkOrderHandler handler,
+        CancellationToken cancellationToken)
+    {
+        var result = await handler.HandleAsync(new CompleteWorkOrderCommand(id), cancellationToken);
+
+        return result.Match(value => Results.Ok(value), error => error.ToProblem());
+    }
+
+    private static async Task<IResult> CancelWorkOrder(
+        Guid id,
+        CancelWorkOrderRequest request,
+        CancelWorkOrderHandler handler,
+        CancellationToken cancellationToken)
+    {
+        var result = await handler.HandleAsync(new CancelWorkOrderCommand(id, request.Reason!), cancellationToken);
 
         return result.Match(value => Results.Ok(value), error => error.ToProblem());
     }

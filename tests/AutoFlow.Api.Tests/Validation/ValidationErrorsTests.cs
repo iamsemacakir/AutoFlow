@@ -112,4 +112,14 @@ public sealed class ValidationErrorsTests
         new PartLineRequest(null, "Brake pad set", -1m, 0.001m).Validate(outOfRange);
         Assert.True(outOfRange.IsEmpty);
     }
+
+    [Fact]
+    public void Cancel_request_needs_a_reason()
+    {
+        var errors = new ValidationErrors();
+
+        new CancelWorkOrderRequest("   ").Validate(errors);
+
+        Assert.Equal("reason", Assert.Single(errors.ToDictionary()).Key);
+    }
 }

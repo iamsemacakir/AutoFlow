@@ -32,8 +32,9 @@ Early foundation. See [ROADMAP.md](ROADMAP.md) for what is done and what comes n
 | Work orders: get, paged history per vehicle | ✅ |
 | Work orders: open, get, history endpoints | ✅ |
 | Work orders: add/remove line endpoints | ✅ |
-| Work orders: status endpoints | ⏳ next |
-| Appointments, invoices | ⏳ planned |
+| Work orders: approve, start, complete, cancel endpoints | ✅ |
+| Appointments: bays/mechanics, booking, overlap rules | ⏳ next |
+| Invoices | ⏳ planned |
 | Auth, UI, deployment | ⏳ planned |
 
 ## Getting started
@@ -89,7 +90,8 @@ Useful endpoints while running in Development:
 
 `POST`/`PUT` bodies are validated first: missing, blank or overlong fields
 answer 400 with every field error at once; a well-formed request that breaks a
-business rule (bad e-mail syntax, invalid VIN, mileage going backwards) answers 422.
+business rule (bad e-mail syntax, invalid VIN, mileage going backwards,
+approving an empty work order) answers 422.
 
 ### Vehicles API
 
@@ -123,12 +125,29 @@ curl -s -X PUT localhost:5080/api/vehicles/<vehicle-id>/mileage -H 'Content-Type
 | `POST /api/work-orders/{id}/labour-lines` | Add labour (`description`, `hours`, `hourlyRate`) | 200, 400, 404, 409, 422 |
 | `POST /api/work-orders/{id}/part-lines` | Add a part (`partNumber?`, `description`, `quantity`, `unitPrice`) | 200, 400, 404, 409, 422 |
 | `DELETE /api/work-orders/{id}/lines/{lineId}` | Remove a line; the other lines keep their numbers | 200, 404, 409, 422 |
+| `POST /api/work-orders/{id}/approve` | The customer agrees to the estimate (draft with lines); the total is kept as `approvedTotal` | 200, 404, 409, 422 |
+| `POST /api/work-orders/{id}/start` | A mechanic starts work on an approved work order | 200, 404, 409, 422 |
+| `POST /api/work-orders/{id}/complete` | Work is done; the lines become final | 200, 404, 409, 422 |
+| `POST /api/work-orders/{id}/cancel` | Cancel a draft or approved work order (`reason`) | 200, 400, 404, 409, 422 |
 
 Amounts are net, in the workshop's currency: quantities and hours have at
 most two decimals, prices are whole cents, and each line total is rounded half
 away from zero to cents. Lines have no URL of their own; every line change
 answers with the whole work order and its new totals. Lines can be changed
 until the work order is completed (422 afterwards).
+
+Status flow: `Draft → Approved → InProgress → Completed → Invoiced`, and
+`Draft`/`Approved → Cancelled`. Each step is its own `POST` action; a step
+from the wrong status is 422, and two changes to the same work order at once
+leave one of them with 409 `conflict.concurrent_update`.
+
+```bash
+curl -s localhost:5080/api/vehicles/<vehicle-id>/work-orders -H 'Content-Type: application/json' \
+  -d '{"complaint":"Grinding noise when braking","mileageKm":48950}'
+curl -s localhost:5080/api/work-orders/<work-order-id>/labour-lines -H 'Content-Type: application/json' \
+  -d '{"description":"Replace front pads and discs","hours":1.5,"hourlyRate":95}'
+curl -s -X POST localhost:5080/api/work-orders/<work-order-id>/approve
+```
 
 The endpoint tables above are pinned by
 `OpenApiContractTests` against `/openapi/v1.json`; change both together.

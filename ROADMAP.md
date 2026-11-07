@@ -34,12 +34,12 @@ updated docs. Steps are done in order unless a dependency forces otherwise.
 - [x] Request validation and consistent problem responses
 - [x] API integration tests: OpenAPI contract, simultaneous requests, end-to-end workflow
 
-## Milestone 4 — Work orders
+## Milestone 4 — Work orders ✅
 
 - [x] `WorkOrder` aggregate: status flow (Draft → Approved → InProgress → Completed → Invoiced, plus Cancelled), labour and part lines, net totals
 - [x] Persistence: work order and line tables, migration, version bump on line changes, `IWorkOrderRepository`
 - [x] Use cases: open (from the vehicle's current owner), edit lines (add labour/part, remove), approve, start, complete, cancel, get, list per vehicle (paged, newest first)
-- [ ] Endpoints and tests
+- [x] Endpoints and tests: open and history under the vehicle, get, add/remove lines, approve/start/complete/cancel actions; OpenAPI contract, race and workflow tests
 
 ## Milestone 5 — Appointments
 

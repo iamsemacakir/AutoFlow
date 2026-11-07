@@ -36,6 +36,10 @@ public sealed class OpenApiContractTests(WebApplicationFactory<Program> factory)
         { "AddLabourLine", "POST", "/api/work-orders/{id}/labour-lines", "200 400 404 409 422" },
         { "AddPartLine", "POST", "/api/work-orders/{id}/part-lines", "200 400 404 409 422" },
         { "RemoveWorkOrderLine", "DELETE", "/api/work-orders/{id}/lines/{lineId}", "200 404 409 422" },
+        { "ApproveWorkOrder", "POST", "/api/work-orders/{id}/approve", "200 404 409 422" },
+        { "StartWorkOrder", "POST", "/api/work-orders/{id}/start", "200 404 409 422" },
+        { "CompleteWorkOrder", "POST", "/api/work-orders/{id}/complete", "200 404 409 422" },
+        { "CancelWorkOrder", "POST", "/api/work-orders/{id}/cancel", "200 400 404 409 422" },
     };
 
     [Theory]

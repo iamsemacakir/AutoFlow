@@ -125,7 +125,9 @@ authentication. Business rules do not live here.
   Work orders follow the same pattern under `/api/vehicles/{vehicleId}/work-orders`
   (open, paged history) and `/api/work-orders/{id}`. A child entity has no
   URL of its own: lines are added under `/labour-lines` and `/part-lines` and
-  removed at `/lines/{lineId}`, and each answers 200 with the whole aggregate. See
+  removed at `/lines/{lineId}`, and each answers 200 with the whole aggregate.
+  A status transition is a body-less `POST` action named after the domain
+  method (`/approve`, `/start`, `/complete`; `/cancel` takes a `reason`). See
   [ADR 0012](adr/0012-work-order-endpoints.md).
 - Request records implement `IValidatableRequest` and check their shape
   (required, length, simple bounds, using the domain's constants); each

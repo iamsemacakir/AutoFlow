@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using AutoFlow.Application.Vehicles;
+using AutoFlow.Application.WorkOrders;
 using static AutoFlow.Api.Tests.ApiTestHelpers;
 
 namespace AutoFlow.Api.Tests.Concurrency;
@@ -132,6 +133,68 @@ public sealed class ConcurrentRequestTests : IDisposable
         }
 
         Assert.Equal(1, holders);
+    }
+
+    [Fact]
+    public async Task Simultaneous_approvals_of_one_work_order_have_exactly_one_winner()
+    {
+        var owner = await _client.CreateCustomerAsync("Anna", "Schmidt");
+        var vehicle = await RegisterVehicleAsync(owner.Id);
+        var workOrder = await _client.OpenWorkOrderAsync(vehicle.Id);
+        using var line = await _client.PostAsJsonAsync(
+            Url($"/api/work-orders/{workOrder.Id}/labour-lines"),
+            new { description = "Inspection", hours = 1m, hourlyRate = 90m });
+        line.EnsureSuccessStatusCode();
+
+        var outcomes = await Task.WhenAll(Enumerable.Range(0, Contenders).Select(async _ =>
+        {
+            using var response = await _client.PostAsync(Url($"/api/work-orders/{workOrder.Id}/approve"), content: null);
+            return (response.StatusCode, Code: await ReadProblemCodeAsync(response));
+        }));
+
+        Assert.Single(outcomes, outcome => outcome.StatusCode == HttpStatusCode.OK);
+        Assert.All(
+            outcomes.Where(outcome => outcome.StatusCode != HttpStatusCode.OK),
+            outcome => Assert.True(
+                (outcome.StatusCode == HttpStatusCode.Conflict && outcome.Code == "conflict.concurrent_update")
+                    // Loaded after the winner committed: no longer a draft.
+                    || (outcome.StatusCode == HttpStatusCode.UnprocessableEntity && outcome.Code == "domain.rule_violated"),
+                $"Approval answered {(int)outcome.StatusCode} {outcome.Code}."));
+
+        var stored = await _client.GetFromJsonAsync<WorkOrderDetails>(Url($"/api/work-orders/{workOrder.Id}"));
+        Assert.Equal(("Approved", 90m), (stored!.Status, stored.ApprovedTotal));
+    }
+
+    [Fact]
+    public async Task Simultaneous_line_additions_store_exactly_the_accepted_lines()
+    {
+        var owner = await _client.CreateCustomerAsync("Anna", "Schmidt");
+        var vehicle = await RegisterVehicleAsync(owner.Id);
+        var workOrder = await _client.OpenWorkOrderAsync(vehicle.Id);
+
+        var outcomes = await Task.WhenAll(Enumerable.Range(1, Contenders).Select(async i =>
+        {
+            var description = $"Job {i}";
+            using var response = await _client.PostAsJsonAsync(
+                Url($"/api/work-orders/{workOrder.Id}/labour-lines"),
+                new { description, hours = 0.5m, hourlyRate = 80m });
+            return (Description: description, response.StatusCode, Code: await ReadProblemCodeAsync(response));
+        }));
+
+        Assert.All(outcomes, outcome => Assert.True(
+            outcome.StatusCode == HttpStatusCode.OK
+                // A stale version is caught by the work order's xmin or, when two requests
+                // insert the same next line number, by the unique line-number index.
+                || (outcome.StatusCode == HttpStatusCode.Conflict
+                    && outcome.Code is "conflict.concurrent_update" or "conflict.duplicate"),
+            $"{outcome.Description} answered {(int)outcome.StatusCode} {outcome.Code}."));
+
+        var accepted = outcomes.Where(outcome => outcome.StatusCode == HttpStatusCode.OK).Select(outcome => outcome.Description);
+        var stored = await _client.GetFromJsonAsync<WorkOrderDetails>(Url($"/api/work-orders/{workOrder.Id}"));
+        Assert.NotEmpty(stored!.Lines);
+        Assert.Equal(accepted.Order(StringComparer.Ordinal), stored.Lines.Select(l => l.Description).Order(StringComparer.Ordinal));
+        Assert.Equal(stored.Lines.Count, stored.Lines.Select(l => l.Number).Distinct().Count());
+        Assert.Equal(stored.Lines.Count * 40m, stored.Total);
     }
 
     public void Dispose() => _client.Dispose();
