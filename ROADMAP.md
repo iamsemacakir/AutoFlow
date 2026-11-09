@@ -43,7 +43,10 @@ updated docs. Steps are done in order unless a dependency forces otherwise.
 
 ## Milestone 5 — Appointments
 
-- [ ] Bays/mechanics capacity, booking, overlap rules, rescheduling
+- [x] Capacity: `Bay` (one vehicle at a time, in/out of service) and `AppointmentSlot` (UTC, 15-minute grid, half-open overlap); mechanics join as users in milestone 7
+- [ ] `Appointment` aggregate: booking, overlap rules, rescheduling, check-in, cancellation, no-show
+- [ ] Persistence: bay and appointment tables, migration, exclusion constraint against double booking
+- [ ] Use cases: manage bays, book, reschedule, cancel, check in, day schedule
 - [ ] Endpoints and tests
 
 ## Milestone 6 — Invoices

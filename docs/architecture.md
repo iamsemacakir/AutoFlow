@@ -32,6 +32,11 @@ through one method per transition (`Approve`, `Start`, `Complete`,
 `MarkInvoiced`, `Cancel`) that checks the state it starts from. See
 [ADR 0010](adr/0010-work-order-aggregate.md).
 
+The workshop's capacity is its bays: a `Bay` holds one vehicle at a time and
+can be taken out of service. Booked time is an `AppointmentSlot`, a half-open
+UTC interval on a 15-minute grid whose `Overlaps` is the one definition of a
+double booking. See [ADR 0013](adr/0013-bay-capacity-and-appointment-slots.md).
+
 **Application** — orchestrates use cases, defines repository interfaces the
 infrastructure implements. Expected failures (not found, duplicate VIN) are
 returned as results; exceptions are reserved for broken invariants and bugs.

@@ -33,7 +33,8 @@ Early foundation. See [ROADMAP.md](ROADMAP.md) for what is done and what comes n
 | Work orders: open, get, history endpoints | ✅ |
 | Work orders: add/remove line endpoints | ✅ |
 | Work orders: approve, start, complete, cancel endpoints | ✅ |
-| Appointments: bays/mechanics, booking, overlap rules | ⏳ next |
+| Appointments: bays (capacity) and 15-minute slots with overlap rule | ✅ |
+| Appointments: booking, rescheduling, overlap checks, endpoints | ⏳ next |
 | Invoices | ⏳ planned |
 | Auth, UI, deployment | ⏳ planned |
 
