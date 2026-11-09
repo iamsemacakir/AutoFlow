@@ -36,6 +36,13 @@ The workshop's capacity is its bays: a `Bay` holds one vehicle at a time and
 can be taken out of service. Booked time is an `AppointmentSlot`, a half-open
 UTC interval on a 15-minute grid whose `Overlaps` is the one definition of a
 double booking. See [ADR 0013](adr/0013-bay-capacity-and-appointment-slots.md).
+An `Appointment` is its own aggregate that references its bay, vehicle and
+customer by id. A rule that spans several aggregates is expressed as a
+comparison between two of them (`ClashesInBayWith`, `ClashesForVehicleWith`)
+that the use case evaluates against the candidates it loads and the database
+backs with a constraint. Only a `Scheduled` appointment can change; `CheckIn`
+(with the work order opened at arrival), `Cancel` and `MarkNoShow` settle it.
+See [ADR 0014](adr/0014-appointment-aggregate.md).
 
 **Application** — orchestrates use cases, defines repository interfaces the
 infrastructure implements. Expected failures (not found, duplicate VIN) are
