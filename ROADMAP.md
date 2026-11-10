@@ -45,7 +45,8 @@ updated docs. Steps are done in order unless a dependency forces otherwise.
 
 - [x] Capacity: `Bay` (one vehicle at a time, in/out of service) and `AppointmentSlot` (UTC, 15-minute grid, half-open overlap); mechanics join as users in milestone 7
 - [x] `Appointment` aggregate: booking (not in the past), double-booking rules per bay and per vehicle, rescheduling, check-in with work order, cancellation, no-show
-- [ ] Persistence: bay and appointment tables, migration, exclusion constraint against double booking
+- [x] Persistence: `bays` table (unique name), migration, `IBayRepository`
+- [ ] Persistence: `appointments` table, migration, exclusion constraints against double booking per bay and per vehicle
 - [ ] Use cases: manage bays, book, reschedule, cancel, check in, day schedule
 - [ ] Endpoints and tests
 

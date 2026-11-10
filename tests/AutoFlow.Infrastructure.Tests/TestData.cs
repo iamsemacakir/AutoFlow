@@ -1,3 +1,4 @@
+using AutoFlow.Domain.Bays;
 using AutoFlow.Domain.Customers;
 using AutoFlow.Domain.Vehicles;
 using AutoFlow.Domain.WorkOrders;
@@ -33,4 +34,10 @@ internal static class TestData
 
     public static WorkOrder WorkOrder(Guid vehicleId, Guid customerId) =>
         Domain.WorkOrders.WorkOrder.Open(vehicleId, customerId, "Squeaking brakes at the front", 62_500, Now);
+
+    /// <summary>A bay with a random name so tests sharing one database never collide.</summary>
+    public static Bay Bay(string? name = null) =>
+        Domain.Bays.Bay.Create(name ?? UniqueBayName(), Now);
+
+    public static string UniqueBayName() => $"Lift {Guid.NewGuid():N}";
 }
