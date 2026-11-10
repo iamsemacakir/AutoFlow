@@ -36,7 +36,8 @@ Early foundation. See [ROADMAP.md](ROADMAP.md) for what is done and what comes n
 | Appointments: bays (capacity) and 15-minute slots with overlap rule | ✅ |
 | Appointments: aggregate (book, reschedule, check in, cancel, no-show, double-booking rules) | ✅ |
 | Appointments: bay persistence (table, unique name, migration) | ✅ |
-| Appointments: appointment persistence, use cases, endpoints | ⏳ next |
+| Appointments: appointment persistence (slot columns, exclusion constraints against double booking) | ✅ |
+| Appointments: use cases, endpoints | ⏳ next |
 | Invoices | ⏳ planned |
 | Auth, UI, deployment | ⏳ planned |
 

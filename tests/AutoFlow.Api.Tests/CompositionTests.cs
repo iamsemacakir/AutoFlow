@@ -28,6 +28,7 @@ public class CompositionTests(WebApplicationFactory<Program> factory)
     [InlineData(typeof(IUnitOfWork))]
     [InlineData(typeof(IWorkOrderRepository))]
     [InlineData(typeof(IBayRepository))]
+    [InlineData(typeof(IAppointmentRepository))]
     public void Use_case_handlers_and_persistence_resolve_per_request(Type service)
     {
         using var scope = factory.Services.CreateScope();
