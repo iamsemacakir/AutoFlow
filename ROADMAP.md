@@ -47,7 +47,8 @@ updated docs. Steps are done in order unless a dependency forces otherwise.
 - [x] `Appointment` aggregate: booking (not in the past), double-booking rules per bay and per vehicle, rescheduling, check-in with work order, cancellation, no-show
 - [x] Persistence: `bays` table (unique name), migration, `IBayRepository`
 - [x] Persistence: `appointments` table, migration, exclusion constraints against double booking per bay and per vehicle, `IAppointmentRepository`
-- [ ] Use cases: manage bays, book, reschedule, cancel, check in, day schedule
+- [x] Use cases: manage bays (create, rename, take out of / return to service, get, list)
+- [ ] Use cases: book, reschedule, cancel, check in, no-show, day schedule
 - [ ] Endpoints and tests
 
 ## Milestone 6 — Invoices

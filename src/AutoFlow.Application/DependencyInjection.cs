@@ -1,3 +1,4 @@
+using AutoFlow.Application.Bays;
 using AutoFlow.Application.Customers;
 using AutoFlow.Application.Vehicles;
 using AutoFlow.Application.WorkOrders;
@@ -39,6 +40,12 @@ public static class DependencyInjection
         services.AddScoped<CancelWorkOrderHandler>();
         services.AddScoped<GetWorkOrderHandler>();
         services.AddScoped<ListVehicleWorkOrdersHandler>();
+        services.AddScoped<CreateBayHandler>();
+        services.AddScoped<RenameBayHandler>();
+        services.AddScoped<TakeBayOutOfServiceHandler>();
+        services.AddScoped<ReturnBayToServiceHandler>();
+        services.AddScoped<GetBayHandler>();
+        services.AddScoped<ListBaysHandler>();
 
         return services;
     }

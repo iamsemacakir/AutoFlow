@@ -1,4 +1,5 @@
 using AutoFlow.Application.Abstractions;
+using AutoFlow.Application.Bays;
 using AutoFlow.Application.Customers;
 using AutoFlow.Application.Tests.Fakes;
 using AutoFlow.Application.Vehicles;
@@ -17,6 +18,7 @@ public class DependencyInjectionTests
             .AddSingleton<ICustomerRepository>(store)
             .AddSingleton<IVehicleRepository>(store)
             .AddSingleton<IWorkOrderRepository>(store)
+            .AddSingleton<IBayRepository>(store)
             .AddSingleton<IUnitOfWork>(store)
             .AddApplication();
 
@@ -47,6 +49,12 @@ public class DependencyInjectionTests
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<CancelWorkOrderHandler>());
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<GetWorkOrderHandler>());
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<ListVehicleWorkOrdersHandler>());
+        Assert.NotNull(scope.ServiceProvider.GetRequiredService<CreateBayHandler>());
+        Assert.NotNull(scope.ServiceProvider.GetRequiredService<RenameBayHandler>());
+        Assert.NotNull(scope.ServiceProvider.GetRequiredService<TakeBayOutOfServiceHandler>());
+        Assert.NotNull(scope.ServiceProvider.GetRequiredService<ReturnBayToServiceHandler>());
+        Assert.NotNull(scope.ServiceProvider.GetRequiredService<GetBayHandler>());
+        Assert.NotNull(scope.ServiceProvider.GetRequiredService<ListBaysHandler>());
         Assert.Same(TimeProvider.System, provider.GetRequiredService<TimeProvider>());
     }
 

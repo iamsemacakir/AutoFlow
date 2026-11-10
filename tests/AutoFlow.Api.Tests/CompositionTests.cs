@@ -1,4 +1,5 @@
 using AutoFlow.Application.Abstractions;
+using AutoFlow.Application.Bays;
 using AutoFlow.Application.Customers;
 using AutoFlow.Application.Vehicles;
 using AutoFlow.Application.WorkOrders;
@@ -25,6 +26,8 @@ public class CompositionTests(WebApplicationFactory<Program> factory)
     [InlineData(typeof(RecordMileageHandler))]
     [InlineData(typeof(TransferVehicleHandler))]
     [InlineData(typeof(OpenWorkOrderHandler))]
+    [InlineData(typeof(CreateBayHandler))]
+    [InlineData(typeof(ListBaysHandler))]
     [InlineData(typeof(IUnitOfWork))]
     [InlineData(typeof(IWorkOrderRepository))]
     [InlineData(typeof(IBayRepository))]

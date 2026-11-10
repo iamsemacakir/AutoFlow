@@ -51,7 +51,7 @@ See [ADR 0002](adr/0002-use-case-handlers-and-result-type.md).
 
 - One use case = one `XxxCommand` record (`XxxQuery` for read-only use
   cases) + one `XxxHandler` class with a `HandleAsync(command, ct)` method,
-  grouped by feature folder (`Customers/`, `Vehicles/`, `WorkOrders/`). No mediator library.
+  grouped by feature folder (`Customers/`, `Vehicles/`, `WorkOrders/`, `Bays/`). No mediator library.
 - Handlers load aggregates through `ICustomerRepository` / `IVehicleRepository`,
   call domain behaviour, then commit once via `IUnitOfWork.SaveChangesAsync`.
   Loaded entities are tracked, so repositories have no `Update` method.
@@ -73,6 +73,11 @@ See [ADR 0002](adr/0002-use-case-handlers-and-result-type.md).
   `TimeProvider.GetUtcNow()`. The handler does not pre-check the current
   status: an illegal transition is the aggregate's `DomainException` (422).
   `MarkInvoiced` gets no use case of its own; issuing an invoice will call it.
+- Bays are managed by `CreateBayHandler`, `RenameBayHandler`,
+  `TakeBayOutOfServiceHandler`, `ReturnBayToServiceHandler`, `GetBayHandler`
+  and `ListBaysHandler` (all bays by name, unpaged). A bay name in use by
+  another bay, in or out of service, is `bay.duplicate_name` (409); the
+  name is validated and trimmed by the domain before it is compared.
 - Errors carry a stable `Code` (`customer.not_found`, `vehicle.duplicate_vin`)
   and an `ErrorKind` that the API maps to HTTP status codes
   (Validation → 400, NotFound → 404, Conflict → 409).

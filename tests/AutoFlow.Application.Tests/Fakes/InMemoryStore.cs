@@ -1,5 +1,6 @@
 using AutoFlow.Application.Abstractions;
 using AutoFlow.Application.Common;
+using AutoFlow.Domain.Bays;
 using AutoFlow.Domain.Customers;
 using AutoFlow.Domain.Vehicles;
 using AutoFlow.Domain.WorkOrders;
@@ -11,7 +12,8 @@ namespace AutoFlow.Application.Tests.Fakes;
 /// visible only after <see cref="SaveChangesAsync"/>; loaded entities are live
 /// references, so mutations are "tracked" automatically.
 /// </summary>
-public sealed class InMemoryStore : IUnitOfWork, ICustomerRepository, IVehicleRepository, IWorkOrderRepository
+public sealed class InMemoryStore
+    : IUnitOfWork, ICustomerRepository, IVehicleRepository, IWorkOrderRepository, IBayRepository
 {
     private readonly Dictionary<Guid, Customer> _customers = [];
     private readonly Dictionary<Guid, Vehicle> _vehicles = [];
@@ -20,6 +22,8 @@ public sealed class InMemoryStore : IUnitOfWork, ICustomerRepository, IVehicleRe
     private readonly List<Customer> _removedCustomers = [];
     private readonly Dictionary<Guid, WorkOrder> _workOrders = [];
     private readonly List<WorkOrder> _pendingWorkOrders = [];
+    private readonly Dictionary<Guid, Bay> _bays = [];
+    private readonly List<Bay> _pendingBays = [];
 
     public int SaveCount { get; private set; }
 
@@ -28,6 +32,8 @@ public sealed class InMemoryStore : IUnitOfWork, ICustomerRepository, IVehicleRe
     public IReadOnlyCollection<Vehicle> Vehicles => _vehicles.Values;
 
     public IReadOnlyCollection<WorkOrder> WorkOrders => _workOrders.Values;
+
+    public IReadOnlyCollection<Bay> Bays => _bays.Values;
 
     /// <summary>Puts an entity straight into the "database", bypassing the unit of work.</summary>
     public Customer Seed(Customer customer)
@@ -50,15 +56,24 @@ public sealed class InMemoryStore : IUnitOfWork, ICustomerRepository, IVehicleRe
         return workOrder;
     }
 
+    /// <inheritdoc cref="Seed(Customer)"/>
+    public Bay Seed(Bay bay)
+    {
+        _bays.Add(bay.Id, bay);
+        return bay;
+    }
+
     public Task SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         _pendingCustomers.ForEach(c => _customers.Add(c.Id, c));
         _pendingVehicles.ForEach(v => _vehicles.Add(v.Id, v));
         _pendingWorkOrders.ForEach(w => _workOrders.Add(w.Id, w));
+        _pendingBays.ForEach(b => _bays.Add(b.Id, b));
         _removedCustomers.ForEach(c => _customers.Remove(c.Id));
         _pendingCustomers.Clear();
         _pendingVehicles.Clear();
         _pendingWorkOrders.Clear();
+        _pendingBays.Clear();
         _removedCustomers.Clear();
         SaveCount++;
         return Task.CompletedTask;
@@ -138,4 +153,17 @@ public sealed class InMemoryStore : IUnitOfWork, ICustomerRepository, IVehicleRe
     }
 
     public void Add(WorkOrder workOrder) => _pendingWorkOrders.Add(workOrder);
+
+    Task<Bay?> IBayRepository.GetByIdAsync(Guid id, CancellationToken cancellationToken) =>
+        Task.FromResult(_bays.GetValueOrDefault(id));
+
+    /// <summary>Same ordering as the PostgreSQL repository (ordinal instead of collation order).</summary>
+    public Task<IReadOnlyList<Bay>> ListAsync(CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<Bay>>(
+        [.. _bays.Values.OrderBy(b => b.Name, StringComparer.Ordinal).ThenBy(b => b.Id)]);
+
+    public Task<bool> ExistsWithNameAsync(string name, CancellationToken cancellationToken = default) =>
+        Task.FromResult(_bays.Values.Any(b => b.Name == name.Trim()));
+
+    public void Add(Bay bay) => _pendingBays.Add(bay);
 }

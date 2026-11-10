@@ -37,7 +37,8 @@ Early foundation. See [ROADMAP.md](ROADMAP.md) for what is done and what comes n
 | Appointments: aggregate (book, reschedule, check in, cancel, no-show, double-booking rules) | ✅ |
 | Appointments: bay persistence (table, unique name, migration) | ✅ |
 | Appointments: appointment persistence (slot columns, exclusion constraints against double booking) | ✅ |
-| Appointments: use cases, endpoints | ⏳ next |
+| Appointments: bay use cases (create, rename, out of / back in service, get, list) | ✅ |
+| Appointments: booking use cases, endpoints | ⏳ next |
 | Invoices | ⏳ planned |
 | Auth, UI, deployment | ⏳ planned |
 
