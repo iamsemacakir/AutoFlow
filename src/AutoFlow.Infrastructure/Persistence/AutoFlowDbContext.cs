@@ -1,4 +1,5 @@
 using AutoFlow.Application.Abstractions;
+using AutoFlow.Domain.Bays;
 using AutoFlow.Domain.Customers;
 using AutoFlow.Domain.Vehicles;
 using AutoFlow.Domain.WorkOrders;
@@ -21,6 +22,8 @@ public sealed class AutoFlowDbContext(DbContextOptions<AutoFlowDbContext> option
     public DbSet<Vehicle> Vehicles => Set<Vehicle>();
 
     public DbSet<WorkOrder> WorkOrders => Set<WorkOrder>();
+
+    public DbSet<Bay> Bays => Set<Bay>();
 
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
     {

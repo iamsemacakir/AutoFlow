@@ -89,13 +89,13 @@ See [ADR 0002](adr/0002-use-case-handlers-and-result-type.md).
 See [ADR 0003](adr/0003-ef-core-postgresql-persistence.md).
 
 - `AutoFlowDbContext` is the `IUnitOfWork`; `CustomerRepository`,
-  `VehicleRepository` and `WorkOrderRepository` are internal and only reachable through the
+  `VehicleRepository`, `WorkOrderRepository` and `BayRepository` are internal and only reachable through the
   application interfaces. `AddInfrastructure(connectionString)` wires them up.
 - Mapping is fluent-only (`Persistence/Configurations/`); the domain carries
   no attributes. Value objects are stored through value converters as their
   normalized string.
 - Database names are snake_case and set explicitly: tables `customers`,
-  `vehicles`, `work_orders`, `work_order_lines`; keys `pk_*`, foreign keys `fk_*`, indexes `ix_*`, unique indexes
+  `vehicles`, `work_orders`, `work_order_lines`, `bays`; keys `pk_*`, foreign keys `fk_*`, indexes `ix_*`, unique indexes
   `ux_*`, check constraints `ck_*`.
 - Every table uses PostgreSQL `xmin` as an optimistic concurrency token
   (shadow property `Version`).
@@ -105,6 +105,9 @@ See [ADR 0003](adr/0003-ef-core-postgresql-persistence.md).
   root row, so the root's `xmin` is the version of the whole aggregate. Enums
   are stored by name with an `IN (…)` check constraint. See
   [ADR 0011](adr/0011-work-order-persistence.md).
+- Bays have a unique name (`ux_bays_name`, exact match after trimming) so
+  the schedule is unambiguous; there are few of them, so `IBayRepository.ListAsync`
+  returns all bays by name without paging.
 - Read-only queries (searches, lists) use `AsNoTracking`; owned children
   come with their root (`ListByVehicleAsync` returns work orders with lines). Customer search
   filters with parameterized SQL (`FromSqlRaw`) because the value-converted
