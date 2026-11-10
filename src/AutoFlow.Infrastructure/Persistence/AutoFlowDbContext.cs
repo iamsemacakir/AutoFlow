@@ -1,4 +1,5 @@
 using AutoFlow.Application.Abstractions;
+using AutoFlow.Domain.Appointments;
 using AutoFlow.Domain.Bays;
 using AutoFlow.Domain.Customers;
 using AutoFlow.Domain.Vehicles;
@@ -25,6 +26,8 @@ public sealed class AutoFlowDbContext(DbContextOptions<AutoFlowDbContext> option
 
     public DbSet<Bay> Bays => Set<Bay>();
 
+    public DbSet<Appointment> Appointments => Set<Appointment>();
+
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
     {
         TouchWorkOrdersWithChangedLines();
@@ -43,7 +46,9 @@ public sealed class AutoFlowDbContext(DbContextOptions<AutoFlowDbContext> option
     /// Commits like <see cref="DbContext.SaveChangesAsync(CancellationToken)"/>,
     /// but translates the two conflicts a lost race can cause into the
     /// application's exceptions, so no layer above needs to know EF Core or
-    /// PostgreSQL error codes. Other failures (e.g. a foreign-key violation,
+    /// PostgreSQL error codes. An exclusion constraint (no two overlapping
+    /// bookings) is uniqueness over a time range and is reported the same way
+    /// as a unique index (ADR 0015). Other failures (e.g. a foreign-key violation,
     /// which a use case should have prevented) stay as they are: they are bugs.
     /// </summary>
     async Task IUnitOfWork.SaveChangesAsync(CancellationToken cancellationToken)
@@ -59,7 +64,10 @@ public sealed class AutoFlowDbContext(DbContextOptions<AutoFlowDbContext> option
                 exception);
         }
         catch (DbUpdateException exception) when (
-            exception.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation } postgresError)
+            exception.InnerException is PostgresException
+            {
+                SqlState: PostgresErrorCodes.UniqueViolation or PostgresErrorCodes.ExclusionViolation,
+            } postgresError)
         {
             throw new UniqueConstraintViolationException(
                 "A record with the same unique value already exists.",
@@ -105,6 +113,10 @@ public sealed class AutoFlowDbContext(DbContextOptions<AutoFlowDbContext> option
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         ArgumentNullException.ThrowIfNull(modelBuilder);
+
+        // GiST support for plain equality (bay_id, vehicle_id) next to the range
+        // overlap operator in the appointments' exclusion constraints.
+        modelBuilder.HasPostgresExtension("btree_gist");
 
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AutoFlowDbContext).Assembly);
     }

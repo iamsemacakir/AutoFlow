@@ -2,6 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-10-22
+- Amended by: [ADR 0015](0015-appointment-persistence-and-exclusion-constraints.md) (raw SQL for exclusion constraints)
 
 ## Context
 

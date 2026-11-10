@@ -1,3 +1,4 @@
+using AutoFlow.Domain.Appointments;
 using AutoFlow.Domain.Vehicles;
 using AutoFlow.Domain.WorkOrders;
 using AutoFlow.Infrastructure.Persistence;
@@ -40,6 +41,21 @@ public class ModelTests
     }
 
     [Fact]
+    public void Appointment_slot_is_a_complex_property_in_two_columns()
+    {
+        using var db = CreateContext();
+        var appointment = db.Model.FindEntityType(typeof(Appointment))!;
+
+        var slot = appointment.FindComplexProperty(nameof(Appointment.Slot));
+
+        Assert.NotNull(slot);
+        Assert.False(slot.IsNullable);
+        Assert.Equal("slot_start", slot.ComplexType.FindProperty(nameof(AppointmentSlot.Start))!.GetColumnName());
+        Assert.Equal("slot_end", slot.ComplexType.FindProperty(nameof(AppointmentSlot.End))!.GetColumnName());
+        Assert.Equal(2, slot.ComplexType.GetProperties().Count());
+    }
+
+    [Fact]
     public void Tables_and_columns_use_snake_case()
     {
         using var db = CreateContext();
@@ -47,7 +63,8 @@ public class ModelTests
         foreach (var entity in db.Model.GetEntityTypes())
         {
             Assert.Matches("^[a-z_]+$", entity.GetTableName());
-            foreach (var property in entity.GetProperties())
+            foreach (var property in entity.GetProperties()
+                .Concat(entity.GetComplexProperties().SelectMany(c => c.ComplexType.GetProperties())))
             {
                 Assert.Matches("^[a-z_]+$", property.GetColumnName());
             }

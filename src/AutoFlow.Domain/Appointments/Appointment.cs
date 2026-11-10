@@ -44,6 +44,27 @@ public sealed class Appointment : Entity
         Status = AppointmentStatus.Scheduled;
     }
 
+    /// <summary>
+    /// Rehydrates a stored appointment. The slot is a value object in its own
+    /// columns, which persistence sets right after construction.
+    /// </summary>
+    private Appointment(
+        Guid id,
+        Guid bayId,
+        Guid vehicleId,
+        Guid customerId,
+        string purpose,
+        DateTimeOffset bookedAt)
+        : base(id)
+    {
+        BayId = bayId;
+        VehicleId = vehicleId;
+        CustomerId = customerId;
+        Slot = null!;
+        Purpose = purpose;
+        BookedAt = bookedAt;
+    }
+
     public Guid BayId { get; private set; }
 
     public Guid VehicleId { get; }
