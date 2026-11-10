@@ -1,0 +1,41 @@
+name: Scaffold
+on:
+  push:
+    branches: ['scaffold/**']
+permissions:
+  contents: read
+jobs:
+  scaffold:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+      - run: dotnet tool restore
+      - name: Add migrations
+        run: |
+          set -e
+          M=src/AutoFlow.Infrastructure/Persistence/Migrations
+          C1=$(git rev-parse HEAD~2)
+          C2=$(git rev-parse HEAD~1)
+          git checkout -q $C1
+          dotnet build AutoFlow.slnx -c Debug
+          dotnet ef migrations add AddBays --project src/AutoFlow.Infrastructure --output-dir Persistence/Migrations
+          mkdir -p /tmp/m1 && cp $M/* /tmp/m1/
+          git checkout -q -- . && git clean -fdq $M
+          git checkout -q $C2
+          cp /tmp/m1/* $M/
+          dotnet build AutoFlow.slnx -c Debug
+          dotnet ef migrations add AddAppointments --project src/AutoFlow.Infrastructure --output-dir Persistence/Migrations
+          mkdir -p /tmp/m2 && cp $M/* /tmp/m2/
+      - name: Dump migrations
+        run: |
+          tar czf - -C /tmp m1 m2 | base64 -w0 > m.b64
+          echo "BEGIN_B64"
+          fold -w 4000 m.b64
+          echo
+          echo "END_B64"
