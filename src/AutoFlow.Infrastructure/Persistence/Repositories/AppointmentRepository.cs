@@ -9,6 +9,9 @@ internal sealed class AppointmentRepository(AutoFlowDbContext db) : IAppointment
     public Task<Appointment?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
         db.Appointments.FirstOrDefaultAsync(a => a.Id == id, cancellationToken);
 
+    public Task<bool> ExistsForCustomerAsync(Guid customerId, CancellationToken cancellationToken = default) =>
+        db.Appointments.AnyAsync(a => a.CustomerId == customerId, cancellationToken);
+
     public async Task<IReadOnlyList<Appointment>> ListClashCandidatesAsync(
         Guid bayId,
         Guid vehicleId,

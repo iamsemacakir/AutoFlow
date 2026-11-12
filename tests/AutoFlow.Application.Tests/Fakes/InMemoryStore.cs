@@ -189,6 +189,9 @@ public sealed class InMemoryStore
     Task<Appointment?> IAppointmentRepository.GetByIdAsync(Guid id, CancellationToken cancellationToken) =>
         Task.FromResult(_appointments.GetValueOrDefault(id));
 
+    Task<bool> IAppointmentRepository.ExistsForCustomerAsync(Guid customerId, CancellationToken cancellationToken) =>
+        Task.FromResult(_appointments.Values.Any(a => a.CustomerId == customerId));
+
     /// <summary>Same filter and ordering as the PostgreSQL repository.</summary>
     public Task<IReadOnlyList<Appointment>> ListClashCandidatesAsync(
         Guid bayId,

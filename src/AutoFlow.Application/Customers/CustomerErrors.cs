@@ -17,6 +17,11 @@ public static class CustomerErrors
             "customer.has_work_orders",
             $"Customer '{customerId}' has work orders. A customer with a service history cannot be deleted.");
 
+    public static Error HasAppointments(Guid customerId) =>
+        Error.Conflict(
+            "customer.has_appointments",
+            $"Customer '{customerId}' has appointments. A customer with a booking history cannot be deleted.");
+
     public static Error SearchTooLong(int maxLength) =>
         Error.Validation("customer.search_too_long", $"The search text must be at most {maxLength} characters.");
 }

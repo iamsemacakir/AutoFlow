@@ -12,6 +12,12 @@ public interface IAppointmentRepository
     Task<Appointment?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// True if the customer booked any appointment, in any status. Like work
+    /// orders, appointments stay with that customer after the vehicle is sold.
+    /// </summary>
+    Task<bool> ExistsForCustomerAsync(Guid customerId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// The appointments a booking of <paramref name="vehicleId"/> into
     /// <paramref name="bayId"/> for <paramref name="slot"/> could clash with:
     /// those that hold their bay (scheduled or checked in), overlap the slot,

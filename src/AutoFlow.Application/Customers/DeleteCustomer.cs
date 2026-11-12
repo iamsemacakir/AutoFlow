@@ -6,10 +6,11 @@ namespace AutoFlow.Application.Customers;
 public sealed record DeleteCustomerCommand(Guid CustomerId);
 
 /// <summary>
-/// Deletes a customer who owns no vehicles and never commissioned a work
-/// order. Vehicles carry the service history, so they have to be transferred
-/// to another customer first; work orders stay with the customer they were
-/// opened for (and will be invoiced to), so a customer who has any is kept.
+/// Deletes a customer who owns no vehicles, never commissioned a work order
+/// and never booked an appointment. Vehicles carry the service history, so
+/// they have to be transferred to another customer first; work orders and
+/// appointments stay with the customer they were made for (work orders will
+/// be invoiced to them), so a customer who has any is kept.
 /// The handler refuses instead of deleting either along with their owner.
 /// Returns the deleted customer.
 /// </summary>
@@ -17,6 +18,7 @@ public sealed class DeleteCustomerHandler(
     ICustomerRepository customers,
     IVehicleRepository vehicles,
     IWorkOrderRepository workOrders,
+    IAppointmentRepository appointments,
     IUnitOfWork unitOfWork)
 {
     public async Task<Result<CustomerDetails>> HandleAsync(
@@ -39,6 +41,11 @@ public sealed class DeleteCustomerHandler(
         if (await workOrders.ExistsForCustomerAsync(customer.Id, cancellationToken))
         {
             return Result.Failure<CustomerDetails>(CustomerErrors.HasWorkOrders(customer.Id));
+        }
+
+        if (await appointments.ExistsForCustomerAsync(customer.Id, cancellationToken))
+        {
+            return Result.Failure<CustomerDetails>(CustomerErrors.HasAppointments(customer.Id));
         }
 
         customers.Remove(customer);

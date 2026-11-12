@@ -182,6 +182,20 @@ public class AppointmentPersistenceTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task ExistsForCustomerAsync_is_true_only_for_customers_who_booked()
+    {
+        var (bay, customer, vehicle) = await SeedAsync();
+        var (_, customerWithoutAppointments, _) = await SeedAsync();
+        await SeedAppointmentAsync(bay.Id, vehicle.Id, customer.Id, TestData.Slot(9, 1));
+
+        await using var db = postgres.CreateContext();
+        var repository = new AppointmentRepository(db);
+
+        Assert.True(await repository.ExistsForCustomerAsync(customer.Id));
+        Assert.False(await repository.ExistsForCustomerAsync(customerWithoutAppointments.Id));
+    }
+
+    [Fact]
     public async Task Foreign_key_rejects_an_appointment_for_an_unknown_bay()
     {
         var (_, customer, vehicle) = await SeedAsync();

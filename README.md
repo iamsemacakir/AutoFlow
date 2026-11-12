@@ -93,7 +93,7 @@ Useful endpoints while running in Development:
 | `GET /api/customers/{id}` | Get one customer | 200, 404 |
 | `POST /api/customers` | Register a customer (`firstName`, `lastName`, `email`, `phoneNumber?`) | 201 + `Location`, 400, 422 |
 | `PUT /api/customers/{id}` | Replace name and contact details | 200, 400, 404, 409, 422 |
-| `DELETE /api/customers/{id}` | Delete a customer who owns no vehicles and has no work orders | 204, 404, 409 |
+| `DELETE /api/customers/{id}` | Delete a customer who owns no vehicles and has no work orders or appointments | 204, 404, 409 |
 
 `POST`/`PUT` bodies are validated first: missing, blank or overlong fields
 answer 400 with every field error at once; a well-formed request that breaks a
@@ -172,7 +172,7 @@ stable `code` to switch on:
 | 400 | `paging.invalid_page`, `paging.invalid_page_size` | paging out of range |
 | 404 | `customer.not_found`, `vehicle.not_found`, `work_order.not_found`, `work_order.line_not_found` / `route.not_found` | unknown resource / unknown URL |
 | 405, 415 | `request.method_not_allowed`, `request.unsupported_media_type` | wrong method, non-JSON body |
-| 409 | `customer.has_vehicles`, `customer.has_work_orders`, `vehicle.duplicate_vin`, `conflict.duplicate`, `conflict.concurrent_update` | conflicts |
+| 409 | `customer.has_vehicles`, `customer.has_work_orders`, `customer.has_appointments`, `vehicle.duplicate_vin`, `conflict.duplicate`, `conflict.concurrent_update` | conflicts |
 | 422 | `domain.rule_violated` | business rule broken |
 | 500 | `server.error` | unexpected failure (no details leaked) |
 
