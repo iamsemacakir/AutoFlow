@@ -88,6 +88,14 @@ See [ADR 0002](adr/0002-use-case-handlers-and-result-type.md).
   all 409. `GetAppointmentHandler` returns one appointment as
   `AppointmentDetails`, whose slot is flattened into `Start` and `End`. See
   [ADR 0016](adr/0016-booking-use-cases.md).
+- An appointment is settled by `CheckInAppointmentHandler`,
+  `CancelAppointmentHandler` or `MarkAppointmentNoShowHandler`, one per
+  domain transition and without pre-checking the status, like work orders.
+  Checking in is an intake: it opens a draft work order for the vehicle's
+  current owner (complaint from the counter, else the appointment's purpose;
+  an optional odometer reading is recorded on the vehicle) and checks the
+  appointment in with it, in one commit, returning both as
+  `CheckedInAppointment`.
 - Errors carry a stable `Code` (`customer.not_found`, `vehicle.duplicate_vin`)
   and an `ErrorKind` that the API maps to HTTP status codes
   (Validation → 400, NotFound → 404, Conflict → 409).

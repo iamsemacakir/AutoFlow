@@ -49,6 +49,9 @@ public static class DependencyInjection
         services.AddScoped<ListBaysHandler>();
         services.AddScoped<BookAppointmentHandler>();
         services.AddScoped<RescheduleAppointmentHandler>();
+        services.AddScoped<CheckInAppointmentHandler>();
+        services.AddScoped<CancelAppointmentHandler>();
+        services.AddScoped<MarkAppointmentNoShowHandler>();
         services.AddScoped<GetAppointmentHandler>();
 
         return services;

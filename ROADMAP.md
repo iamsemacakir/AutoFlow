@@ -49,7 +49,7 @@ updated docs. Steps are done in order unless a dependency forces otherwise.
 - [x] Persistence: `appointments` table, migration, exclusion constraints against double booking per bay and per vehicle, `IAppointmentRepository`
 - [x] Use cases: manage bays (create, rename, take out of / return to service, get, list)
 - [x] Use cases: book (for the current owner), reschedule, get; bay in service and clash checks as 409 conflicts
-- [ ] Use cases: cancel, check in, no-show
+- [x] Use cases: check in (opens the work order in the same commit), cancel, no-show
 - [ ] Use cases: day schedule
 - [ ] Endpoints and tests
 

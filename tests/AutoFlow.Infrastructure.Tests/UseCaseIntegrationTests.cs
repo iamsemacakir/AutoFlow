@@ -5,6 +5,7 @@ using AutoFlow.Application.Common;
 using AutoFlow.Application.Customers;
 using AutoFlow.Application.Vehicles;
 using AutoFlow.Application.WorkOrders;
+using AutoFlow.Domain.Appointments;
 using AutoFlow.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -152,6 +153,35 @@ public sealed class UseCaseIntegrationTests : IDisposable
         Assert.Equal(customer.Id, stored.CustomerId);
         Assert.Equal<DateTimeOffset?>(TestData.Now, stored.RescheduledAt);
         Assert.Equal(morning.Start, second.Start);
+    }
+
+    [Fact]
+    public async Task Checking_in_stores_the_work_order_and_the_appointment_in_one_commit()
+    {
+        var customer = await InScope<RegisterCustomerHandler, CustomerDetails>(handler =>
+            handler.HandleAsync(new RegisterCustomerCommand("Tim", "Vogel", "tim@example.com", null)));
+        var vehicle = await InScope<RegisterVehicleHandler, VehicleDetails>(handler =>
+            handler.HandleAsync(new RegisterVehicleCommand(customer.Id, TestData.UniqueVin(), "F-TV 8", "Seat", "Leon", 2019, 70_000)));
+        var bay = await InScope<CreateBayHandler, BayDetails>(handler =>
+            handler.HandleAsync(new CreateBayCommand(TestData.UniqueBayName())));
+        var slot = TestData.Slot(9, 1);
+        var booked = await InScope<BookAppointmentHandler, AppointmentDetails>(handler =>
+            handler.HandleAsync(new BookAppointmentCommand(vehicle.Id, bay.Id, slot.Start, slot.End, "Annual service")));
+
+        var checkedIn = await InScope<CheckInAppointmentHandler, CheckedInAppointment>(handler =>
+            handler.HandleAsync(new CheckInAppointmentCommand(booked.Id, 71_500)));
+
+        using var scope = _provider.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AutoFlowDbContext>();
+        var storedAppointment = await db.Appointments.SingleAsync(a => a.Id == booked.Id);
+        var storedWorkOrder = await db.WorkOrders.SingleAsync(w => w.Id == checkedIn.WorkOrder.Id);
+        var storedVehicle = await db.Vehicles.SingleAsync(v => v.Id == vehicle.Id);
+
+        Assert.Equal(AppointmentStatus.CheckedIn, storedAppointment.Status);
+        Assert.Equal(storedWorkOrder.Id, storedAppointment.WorkOrderId);
+        Assert.Equal("Annual service", storedWorkOrder.Complaint);
+        Assert.Equal(71_500, storedWorkOrder.MileageKmAtIntake);
+        Assert.Equal(71_500, storedVehicle.MileageKm);
     }
 
     public void Dispose() => _provider.Dispose();

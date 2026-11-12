@@ -59,6 +59,9 @@ public class DependencyInjectionTests
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<ListBaysHandler>());
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<BookAppointmentHandler>());
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<RescheduleAppointmentHandler>());
+        Assert.NotNull(scope.ServiceProvider.GetRequiredService<CheckInAppointmentHandler>());
+        Assert.NotNull(scope.ServiceProvider.GetRequiredService<CancelAppointmentHandler>());
+        Assert.NotNull(scope.ServiceProvider.GetRequiredService<MarkAppointmentNoShowHandler>());
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<GetAppointmentHandler>());
         Assert.Same(TimeProvider.System, provider.GetRequiredService<TimeProvider>());
     }
