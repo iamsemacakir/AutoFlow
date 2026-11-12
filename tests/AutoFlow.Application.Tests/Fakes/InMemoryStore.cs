@@ -1,5 +1,6 @@
 using AutoFlow.Application.Abstractions;
 using AutoFlow.Application.Common;
+using AutoFlow.Domain.Appointments;
 using AutoFlow.Domain.Bays;
 using AutoFlow.Domain.Customers;
 using AutoFlow.Domain.Vehicles;
@@ -13,7 +14,12 @@ namespace AutoFlow.Application.Tests.Fakes;
 /// references, so mutations are "tracked" automatically.
 /// </summary>
 public sealed class InMemoryStore
-    : IUnitOfWork, ICustomerRepository, IVehicleRepository, IWorkOrderRepository, IBayRepository
+    : IUnitOfWork,
+    ICustomerRepository,
+    IVehicleRepository,
+    IWorkOrderRepository,
+    IBayRepository,
+    IAppointmentRepository
 {
     private readonly Dictionary<Guid, Customer> _customers = [];
     private readonly Dictionary<Guid, Vehicle> _vehicles = [];
@@ -24,6 +30,8 @@ public sealed class InMemoryStore
     private readonly List<WorkOrder> _pendingWorkOrders = [];
     private readonly Dictionary<Guid, Bay> _bays = [];
     private readonly List<Bay> _pendingBays = [];
+    private readonly Dictionary<Guid, Appointment> _appointments = [];
+    private readonly List<Appointment> _pendingAppointments = [];
 
     public int SaveCount { get; private set; }
 
@@ -34,6 +42,8 @@ public sealed class InMemoryStore
     public IReadOnlyCollection<WorkOrder> WorkOrders => _workOrders.Values;
 
     public IReadOnlyCollection<Bay> Bays => _bays.Values;
+
+    public IReadOnlyCollection<Appointment> Appointments => _appointments.Values;
 
     /// <summary>Puts an entity straight into the "database", bypassing the unit of work.</summary>
     public Customer Seed(Customer customer)
@@ -63,17 +73,26 @@ public sealed class InMemoryStore
         return bay;
     }
 
+    /// <inheritdoc cref="Seed(Customer)"/>
+    public Appointment Seed(Appointment appointment)
+    {
+        _appointments.Add(appointment.Id, appointment);
+        return appointment;
+    }
+
     public Task SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         _pendingCustomers.ForEach(c => _customers.Add(c.Id, c));
         _pendingVehicles.ForEach(v => _vehicles.Add(v.Id, v));
         _pendingWorkOrders.ForEach(w => _workOrders.Add(w.Id, w));
         _pendingBays.ForEach(b => _bays.Add(b.Id, b));
+        _pendingAppointments.ForEach(a => _appointments.Add(a.Id, a));
         _removedCustomers.ForEach(c => _customers.Remove(c.Id));
         _pendingCustomers.Clear();
         _pendingVehicles.Clear();
         _pendingWorkOrders.Clear();
         _pendingBays.Clear();
+        _pendingAppointments.Clear();
         _removedCustomers.Clear();
         SaveCount++;
         return Task.CompletedTask;
@@ -166,4 +185,25 @@ public sealed class InMemoryStore
         Task.FromResult(_bays.Values.Any(b => b.Name == name.Trim()));
 
     public void Add(Bay bay) => _pendingBays.Add(bay);
+
+    Task<Appointment?> IAppointmentRepository.GetByIdAsync(Guid id, CancellationToken cancellationToken) =>
+        Task.FromResult(_appointments.GetValueOrDefault(id));
+
+    /// <summary>Same filter and ordering as the PostgreSQL repository.</summary>
+    public Task<IReadOnlyList<Appointment>> ListClashCandidatesAsync(
+        Guid bayId,
+        Guid vehicleId,
+        AppointmentSlot slot,
+        CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<Appointment>>(
+        [
+            .. _appointments.Values
+                .Where(a => a.OccupiesBay)
+                .Where(a => a.BayId == bayId || a.VehicleId == vehicleId)
+                .Where(a => a.Slot.Overlaps(slot))
+                .OrderBy(a => a.Slot.Start)
+                .ThenBy(a => a.Id),
+        ]);
+
+    public void Add(Appointment appointment) => _pendingAppointments.Add(appointment);
 }

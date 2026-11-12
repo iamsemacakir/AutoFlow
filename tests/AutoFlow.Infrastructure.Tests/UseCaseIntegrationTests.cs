@@ -1,4 +1,6 @@
 using AutoFlow.Application;
+using AutoFlow.Application.Appointments;
+using AutoFlow.Application.Bays;
 using AutoFlow.Application.Common;
 using AutoFlow.Application.Customers;
 using AutoFlow.Application.Vehicles;
@@ -110,6 +112,46 @@ public sealed class UseCaseIntegrationTests : IDisposable
         Assert.Equal(2, line.Number);
         Assert.Equal("BP-12", line.PartNumber);
         Assert.Equal(64m, stored.Total);
+    }
+
+    [Fact]
+    public async Task Booking_and_rescheduling_check_clashes_against_stored_appointments()
+    {
+        var customer = await InScope<RegisterCustomerHandler, CustomerDetails>(handler =>
+            handler.HandleAsync(new RegisterCustomerCommand("Eva", "Krause", "eva@example.com", null)));
+        var vehicle = await InScope<RegisterVehicleHandler, VehicleDetails>(handler =>
+            handler.HandleAsync(new RegisterVehicleCommand(customer.Id, TestData.UniqueVin(), "D-EK 3", "Ford", "Focus", 2016, 90_000)));
+        var otherVehicle = await InScope<RegisterVehicleHandler, VehicleDetails>(handler =>
+            handler.HandleAsync(new RegisterVehicleCommand(customer.Id, TestData.UniqueVin(), "D-EK 4", "Ford", "Fiesta", 2018, 60_000)));
+        var bay = await InScope<CreateBayHandler, BayDetails>(handler =>
+            handler.HandleAsync(new CreateBayCommand(TestData.UniqueBayName())));
+        var morning = TestData.Slot(9, 2);
+        var booked = await InScope<BookAppointmentHandler, AppointmentDetails>(handler =>
+            handler.HandleAsync(new BookAppointmentCommand(vehicle.Id, bay.Id, morning.Start, morning.End, "Annual service")));
+
+        using (var scope = _provider.CreateScope())
+        {
+            var clash = TestData.Slot(10, 1);
+            var refused = await scope.ServiceProvider.GetRequiredService<BookAppointmentHandler>().HandleAsync(
+                new BookAppointmentCommand(otherVehicle.Id, bay.Id, clash.Start, clash.End, "Oil change"));
+
+            Assert.Equal("appointment.bay_already_booked", refused.Error.Code);
+        }
+
+        var afternoon = TestData.Slot(14, 2);
+        await InScope<RescheduleAppointmentHandler, AppointmentDetails>(handler =>
+            handler.HandleAsync(new RescheduleAppointmentCommand(booked.Id, bay.Id, afternoon.Start, afternoon.End)));
+        var second = await InScope<BookAppointmentHandler, AppointmentDetails>(handler =>
+            handler.HandleAsync(new BookAppointmentCommand(otherVehicle.Id, bay.Id, morning.Start, morning.End, "Oil change")));
+
+        using var readScope = _provider.CreateScope();
+        var db = readScope.ServiceProvider.GetRequiredService<AutoFlowDbContext>();
+        var stored = await db.Appointments.SingleAsync(a => a.Id == booked.Id);
+
+        Assert.Equal(afternoon, stored.Slot);
+        Assert.Equal(customer.Id, stored.CustomerId);
+        Assert.Equal<DateTimeOffset?>(TestData.Now, stored.RescheduledAt);
+        Assert.Equal(morning.Start, second.Start);
     }
 
     public void Dispose() => _provider.Dispose();

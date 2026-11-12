@@ -1,3 +1,4 @@
+using AutoFlow.Application.Appointments;
 using AutoFlow.Application.Bays;
 using AutoFlow.Application.Customers;
 using AutoFlow.Application.Vehicles;
@@ -46,6 +47,9 @@ public static class DependencyInjection
         services.AddScoped<ReturnBayToServiceHandler>();
         services.AddScoped<GetBayHandler>();
         services.AddScoped<ListBaysHandler>();
+        services.AddScoped<BookAppointmentHandler>();
+        services.AddScoped<RescheduleAppointmentHandler>();
+        services.AddScoped<GetAppointmentHandler>();
 
         return services;
     }

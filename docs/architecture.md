@@ -51,7 +51,8 @@ See [ADR 0002](adr/0002-use-case-handlers-and-result-type.md).
 
 - One use case = one `XxxCommand` record (`XxxQuery` for read-only use
   cases) + one `XxxHandler` class with a `HandleAsync(command, ct)` method,
-  grouped by feature folder (`Customers/`, `Vehicles/`, `WorkOrders/`, `Bays/`). No mediator library.
+  grouped by feature folder (`Customers/`, `Vehicles/`, `WorkOrders/`, `Bays/`,
+  `Appointments/`). No mediator library.
 - Handlers load aggregates through `ICustomerRepository` / `IVehicleRepository`,
   call domain behaviour, then commit once via `IUnitOfWork.SaveChangesAsync`.
   Loaded entities are tracked, so repositories have no `Update` method.
@@ -78,6 +79,15 @@ See [ADR 0002](adr/0002-use-case-handlers-and-result-type.md).
   and `ListBaysHandler` (all bays by name, unpaged). A bay name in use by
   another bay, in or out of service, is `bay.duplicate_name` (409); the
   name is validated and trimmed by the domain before it is compared.
+- Appointments are booked by `BookAppointmentHandler` (for the vehicle's
+  current owner) and moved by `RescheduleAppointmentHandler`; both run
+  `BookingRules.CheckAsync` after the domain has accepted the change: the
+  bay must be in service (`appointment.bay_out_of_service`) and no other
+  appointment may hold the bay or the vehicle in an overlapping slot
+  (`appointment.bay_already_booked`, `appointment.vehicle_already_booked`),
+  all 409. `GetAppointmentHandler` returns one appointment as
+  `AppointmentDetails`, whose slot is flattened into `Start` and `End`. See
+  [ADR 0016](adr/0016-booking-use-cases.md).
 - Errors carry a stable `Code` (`customer.not_found`, `vehicle.duplicate_vin`)
   and an `ErrorKind` that the API maps to HTTP status codes
   (Validation → 400, NotFound → 404, Conflict → 409).

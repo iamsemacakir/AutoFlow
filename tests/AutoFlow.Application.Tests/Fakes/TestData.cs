@@ -1,3 +1,5 @@
+using AutoFlow.Domain.Appointments;
+using AutoFlow.Domain.Bays;
 using AutoFlow.Domain.Customers;
 using AutoFlow.Domain.Vehicles;
 using AutoFlow.Domain.WorkOrders;
@@ -21,4 +23,24 @@ internal static class TestData
             "Squeaking brakes at the front",
             vehicle.MileageKm,
             createdAt ?? FixedTimeProvider.Default);
+
+    public static Bay Bay(string name = "Lift 1") => Domain.Bays.Bay.Create(name, FixedTimeProvider.Default);
+
+    /// <summary>
+    /// A slot on the day after <see cref="FixedTimeProvider.Default"/>, so it
+    /// is never in the past: <c>Slot(9, 2)</c> is 09:00–11:00 UTC.
+    /// </summary>
+    public static AppointmentSlot Slot(double startHour, double hours) =>
+        AppointmentSlot.StartingAt(
+            new DateTimeOffset(FixedTimeProvider.Default.Date.AddDays(1), TimeSpan.Zero).AddHours(startHour),
+            TimeSpan.FromHours(hours));
+
+    public static Appointment Appointment(Bay bay, Vehicle vehicle, AppointmentSlot slot) =>
+        Domain.Appointments.Appointment.Book(
+            bay.Id,
+            vehicle.Id,
+            vehicle.CustomerId,
+            slot,
+            "Annual service",
+            FixedTimeProvider.Default);
 }
