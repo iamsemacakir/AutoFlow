@@ -46,6 +46,9 @@ public sealed class OpenApiContractTests(WebApplicationFactory<Program> factory)
         { "RenameBay", "PUT", "/api/bays/{id}", "200 400 404 409 422" },
         { "TakeBayOutOfService", "POST", "/api/bays/{id}/take-out-of-service", "200 404 409 422" },
         { "ReturnBayToService", "POST", "/api/bays/{id}/return-to-service", "200 404 409 422" },
+        { "BookAppointment", "POST", "/api/vehicles/{vehicleId}/appointments", "201 400 404 409 422" },
+        { "GetAppointment", "GET", "/api/appointments/{id}", "200 404" },
+        { "RescheduleAppointment", "POST", "/api/appointments/{id}/reschedule", "200 400 404 409 422" },
     };
 
     [Theory]
@@ -109,6 +112,10 @@ public sealed class OpenApiContractTests(WebApplicationFactory<Program> factory)
         "approvedAt approvedTotal cancellationReason cancelledAt complaint completedAt createdAt customerId id " +
         "invoicedAt labourTotal lines mileageKmAtIntake partsTotal startedAt status total vehicleId")]
     [InlineData("BayDetails", "createdAt id isInService name")]
+    [InlineData(
+        "AppointmentDetails",
+        "bayId bookedAt cancellationReason cancelledAt checkedInAt customerId end id noShowAt purpose " +
+        "rescheduledAt start status vehicleId workOrderId")]
     [InlineData("WorkOrderLineDetails", "description id kind number partNumber quantity total unitPrice")]
     public async Task Read_models_are_documented_with_camel_case_properties(string schema, string properties)
     {

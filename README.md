@@ -42,7 +42,8 @@ Early foundation. See [ROADMAP.md](ROADMAP.md) for what is done and what comes n
 | Appointments: check-in (opens the work order), cancel, no-show use cases | ✅ |
 | Appointments: day schedule use case (time-zone aware, every bay) | ✅ |
 | Appointments: bay endpoints (list, create, get, rename, out of / back in service) | ✅ |
-| Appointments: appointment and day schedule endpoints | ⏳ next |
+| Appointments: book, get, reschedule endpoints | ✅ |
+| Appointments: check-in, cancel, no-show and day schedule endpoints | ⏳ next |
 | Invoices | ⏳ planned |
 | Auth, UI, deployment | ⏳ planned |
 
@@ -178,6 +179,30 @@ curl -s localhost:5080/api/bays -H 'Content-Type: application/json' -d '{"name":
 curl -s -X POST localhost:5080/api/bays/<bay-id>/take-out-of-service
 ```
 
+### Appointments API
+
+| Method & path | Purpose | Responses |
+| --- | --- | --- |
+| `POST /api/vehicles/{vehicleId}/appointments` | Book a bay for the vehicle's current owner (`bayId`, `start`, `end`, `purpose`) | 201 + `Location`, 400, 404, 409, 422 |
+| `GET /api/appointments/{id}` | Get one appointment, in any status | 200, 404 |
+| `POST /api/appointments/{id}/reschedule` | Move a scheduled appointment (`bayId` — the current one to change only the time —, `start`, `end`) | 200, 400, 404, 409, 422 |
+
+`start` and `end` are ISO 8601 timestamps with an offset (`2026-11-20T09:00:00+01:00`)
+and come back in UTC; slots start and end on a quarter hour, end after they
+start, last at most five days and are not in the past (422 otherwise). A bay
+out of service takes no bookings (`appointment.bay_out_of_service`), and a
+bay or vehicle already booked for part of the slot is
+`appointment.bay_already_booked` / `appointment.vehicle_already_booked` (all
+409, naming the appointment in the way). Back-to-back slots (one ends at
+10:00, the next starts at 10:00) do not clash.
+
+```bash
+curl -s localhost:5080/api/vehicles/<vehicle-id>/appointments -H 'Content-Type: application/json' \
+  -d '{"bayId":"<bay-id>","start":"2026-11-20T09:00:00+01:00","end":"2026-11-20T10:30:00+01:00","purpose":"Annual service"}'
+curl -s localhost:5080/api/appointments/<appointment-id>/reschedule -H 'Content-Type: application/json' \
+  -d '{"bayId":"<bay-id>","start":"2026-11-20T13:00:00+01:00","end":"2026-11-20T14:30:00+01:00"}'
+```
+
 The endpoint tables above are pinned by
 `OpenApiContractTests` against `/openapi/v1.json`; change both together.
 
@@ -192,9 +217,9 @@ stable `code` to switch on:
 | 400 | `validation.failed` (+ `errors` per field) | body fields missing, blank, too long or out of range |
 | 400 | `request.malformed` | unreadable JSON, wrong value type, unparsable query/route value |
 | 400 | `paging.invalid_page`, `paging.invalid_page_size` | paging out of range |
-| 404 | `customer.not_found`, `vehicle.not_found`, `work_order.not_found`, `work_order.line_not_found`, `bay.not_found` / `route.not_found` | unknown resource / unknown URL |
+| 404 | `customer.not_found`, `vehicle.not_found`, `work_order.not_found`, `work_order.line_not_found`, `bay.not_found`, `appointment.not_found` / `route.not_found` | unknown resource / unknown URL |
 | 405, 415 | `request.method_not_allowed`, `request.unsupported_media_type` | wrong method, non-JSON body |
-| 409 | `customer.has_vehicles`, `customer.has_work_orders`, `customer.has_appointments`, `vehicle.duplicate_vin`, `bay.duplicate_name`, `conflict.duplicate`, `conflict.concurrent_update` | conflicts |
+| 409 | `customer.has_vehicles`, `customer.has_work_orders`, `customer.has_appointments`, `vehicle.duplicate_vin`, `bay.duplicate_name`, `appointment.bay_out_of_service`, `appointment.bay_already_booked`, `appointment.vehicle_already_booked`, `conflict.duplicate`, `conflict.concurrent_update` | conflicts |
 | 422 | `domain.rule_violated` | business rule broken |
 | 500 | `server.error` | unexpected failure (no details leaked) |
 

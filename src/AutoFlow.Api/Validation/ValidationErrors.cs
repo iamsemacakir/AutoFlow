@@ -89,6 +89,18 @@ public sealed class ValidationErrors
         }
     }
 
+    /// <summary>
+    /// The timestamp must be present. Whether it is on the booking grid or in
+    /// the past is a domain rule (422).
+    /// </summary>
+    public void RequireTimestamp(string field, DateTimeOffset? value)
+    {
+        if (value is null)
+        {
+            Add(field, $"'{field}' is required.");
+        }
+    }
+
     public Dictionary<string, string[]> ToDictionary() =>
         _errors.ToDictionary(e => e.Key, e => e.Value.ToArray(), StringComparer.Ordinal);
 

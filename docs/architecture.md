@@ -187,6 +187,12 @@ authentication. Business rules do not live here.
   Bays live at `/api/bays` (list all by name, unpaged; create; get; `PUT`
   renames) with `/take-out-of-service` and `/return-to-service` actions;
   they are never deleted, so there is no `DELETE`.
+  Appointments are booked under the vehicle that is brought in
+  (`POST /api/vehicles/{vehicleId}/appointments`) and addressed at
+  `/api/appointments/{id}` afterwards; moving one is the `/reschedule`
+  action, since it is checked against other appointments rather than
+  replacing a value. Timestamps in requests carry an offset and come back
+  in UTC.
 - Request records implement `IValidatableRequest` and check their shape
   (required, length, simple bounds, using the domain's constants); each
   endpoint group calls `WithRequestValidation()`, whose filter answers 400

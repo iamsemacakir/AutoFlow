@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using AutoFlow.Application.Appointments;
 using AutoFlow.Application.Bays;
 using AutoFlow.Application.Customers;
 using AutoFlow.Application.Vehicles;
@@ -53,6 +54,24 @@ internal static class ApiTestHelpers
         using var response = await client.PostAsJsonAsync(Url($"/api/vehicles/{vehicleId}/work-orders"), new { complaint });
         response.EnsureSuccessStatusCode();
         return (await response.Content.ReadFromJsonAsync<WorkOrderDetails>())!;
+    }
+
+    /// <summary>
+    /// A moment on the 15-minute grid a week from today (UTC), so bookings
+    /// made with the real clock are never in the past: <c>InAWeek(9)</c> is
+    /// 09:00 UTC. Tests isolate themselves with fresh bays and vehicles.
+    /// </summary>
+    public static DateTimeOffset InAWeek(double hour) =>
+        new DateTimeOffset(DateTime.UtcNow.Date.AddDays(7), TimeSpan.Zero).AddHours(hour);
+
+    public static async Task<AppointmentDetails> BookAppointmentAsync(
+        this HttpClient client, Guid vehicleId, Guid bayId, DateTimeOffset start, DateTimeOffset end)
+    {
+        using var response = await client.PostAsJsonAsync(
+            Url($"/api/vehicles/{vehicleId}/appointments"),
+            new { bayId, start, end, purpose = "Annual service" });
+        response.EnsureSuccessStatusCode();
+        return (await response.Content.ReadFromJsonAsync<AppointmentDetails>())!;
     }
 
     /// <summary>PostgreSQL stores microseconds, .NET timestamps have 100 ns ticks.</summary>

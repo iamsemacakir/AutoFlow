@@ -22,6 +22,9 @@ public sealed class ConcurrentRequestTests : IDisposable
     // unique index after passing that check at the same moment.
     private static readonly string[] DuplicateVinCodes = ["vehicle.duplicate_vin", "conflict.duplicate"];
 
+    // Same for bookings: the clash pre-check, or the bay exclusion constraint.
+    private static readonly string[] BayClashCodes = ["appointment.bay_already_booked", "conflict.duplicate"];
+
     private readonly HttpClient _client;
 
     public ConcurrentRequestTests(ApiDatabaseFixture api)
@@ -56,6 +59,35 @@ public sealed class ConcurrentRequestTests : IDisposable
 
         var vehicles = await _client.GetFromJsonAsync<List<VehicleDetails>>(Url($"/api/customers/{owner.Id}/vehicles"));
         Assert.Equal(vin, Assert.Single(vehicles!).Vin);
+    }
+
+    [Fact]
+    public async Task Simultaneous_bookings_of_one_bay_and_slot_keep_exactly_one()
+    {
+        var bay = await _client.CreateBayAsync();
+        var owner = await _client.CreateCustomerAsync("Anna", "Schmidt");
+        var vehicles = new List<VehicleDetails>();
+        for (var i = 0; i < Contenders; i++)
+        {
+            vehicles.Add(await RegisterVehicleAsync(owner.Id));
+        }
+
+        var outcomes = await Task.WhenAll(vehicles.Select(async vehicle =>
+        {
+            using var response = await _client.PostAsJsonAsync(
+                Url($"/api/vehicles/{vehicle.Id}/appointments"),
+                new { bayId = bay.Id, start = InAWeek(9), end = InAWeek(10.5), purpose = "Annual service" });
+            return (response.StatusCode, Code: await ReadProblemCodeAsync(response));
+        }));
+
+        Assert.Single(outcomes, outcome => outcome.StatusCode == HttpStatusCode.Created);
+        Assert.All(
+            outcomes.Where(outcome => outcome.StatusCode != HttpStatusCode.Created),
+            outcome =>
+            {
+                Assert.Equal(HttpStatusCode.Conflict, outcome.StatusCode);
+                Assert.Contains(outcome.Code, BayClashCodes);
+            });
     }
 
     [Fact]

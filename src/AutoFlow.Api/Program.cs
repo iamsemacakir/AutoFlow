@@ -1,3 +1,4 @@
+using AutoFlow.Api.Appointments;
 using AutoFlow.Api.Bays;
 using AutoFlow.Api.Customers;
 using AutoFlow.Api.Errors;
@@ -48,6 +49,7 @@ app.MapCustomerEndpoints();
 app.MapVehicleEndpoints();
 app.MapWorkOrderEndpoints();
 app.MapBayEndpoints();
+app.MapAppointmentEndpoints();
 
 app.MapGet("/", () => Results.Ok(new { name = "AutoFlow API", status = "running" }))
     .WithName("GetApiInfo")

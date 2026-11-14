@@ -1,3 +1,4 @@
+using AutoFlow.Api.Appointments;
 using AutoFlow.Api.Customers;
 using AutoFlow.Api.Validation;
 using AutoFlow.Api.Vehicles;
@@ -119,5 +120,27 @@ public sealed class ValidationErrorsTests
         new CancelWorkOrderRequest("   ").Validate(errors);
 
         Assert.Equal("reason", Assert.Single(errors.ToDictionary()).Key);
+    }
+
+    [Fact]
+    public void Booking_request_leaves_the_slot_rules_to_the_domain()
+    {
+        var errors = new ValidationErrors();
+        var start = new DateTimeOffset(2026, 11, 20, 9, 7, 0, TimeSpan.Zero);
+
+        // Off the grid and ending before it starts: both are 422 from the domain.
+        new BookAppointmentRequest(Guid.NewGuid(), start, start.AddHours(-1), "Oil change").Validate(errors);
+
+        Assert.True(errors.IsEmpty);
+    }
+
+    [Fact]
+    public void Reschedule_request_needs_a_bay_and_both_ends_of_the_slot()
+    {
+        var errors = new ValidationErrors();
+
+        new RescheduleAppointmentRequest(Guid.Empty, null, null).Validate(errors);
+
+        Assert.Equal("bayId end start", string.Join(' ', errors.ToDictionary().Keys.Order(StringComparer.Ordinal)));
     }
 }
