@@ -44,6 +44,13 @@ backs with a constraint. Only a `Scheduled` appointment can change; `CheckIn`
 (with the work order opened at arrival), `Cancel` and `MarkNoShow` settle it.
 See [ADR 0014](adr/0014-appointment-aggregate.md).
 
+An `Invoice` is a document rather than a view: `Invoice.IssueFor` copies a
+completed work order's lines, the customer's name, the vehicle and the VAT
+rate of the day, and nothing on it changes afterwards except that it gets
+paid (`RecordPayment`: `Issued → PartiallyPaid → Paid`, never more than the
+open balance). VAT is calculated once on the net total. See
+[ADR 0018](adr/0018-invoice-aggregate.md).
+
 **Application** — orchestrates use cases, defines repository interfaces the
 infrastructure implements. Expected failures (not found, duplicate VIN) are
 returned as results; exceptions are reserved for broken invariants and bugs.
