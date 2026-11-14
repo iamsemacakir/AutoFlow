@@ -184,6 +184,9 @@ authentication. Business rules do not live here.
   A status transition is a body-less `POST` action named after the domain
   method (`/approve`, `/start`, `/complete`; `/cancel` takes a `reason`). See
   [ADR 0012](adr/0012-work-order-endpoints.md).
+  Bays live at `/api/bays` (list all by name, unpaged; create; get; `PUT`
+  renames) with `/take-out-of-service` and `/return-to-service` actions;
+  they are never deleted, so there is no `DELETE`.
 - Request records implement `IValidatableRequest` and check their shape
   (required, length, simple bounds, using the domain's constants); each
   endpoint group calls `WithRequestValidation()`, whose filter answers 400

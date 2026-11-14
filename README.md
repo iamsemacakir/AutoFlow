@@ -41,7 +41,8 @@ Early foundation. See [ROADMAP.md](ROADMAP.md) for what is done and what comes n
 | Appointments: book, reschedule, get use cases (bay in service, clash checks) | ✅ |
 | Appointments: check-in (opens the work order), cancel, no-show use cases | ✅ |
 | Appointments: day schedule use case (time-zone aware, every bay) | ✅ |
-| Appointments: bay, appointment and schedule endpoints | ⏳ next |
+| Appointments: bay endpoints (list, create, get, rename, out of / back in service) | ✅ |
+| Appointments: appointment and day schedule endpoints | ⏳ next |
 | Invoices | ⏳ planned |
 | Auth, UI, deployment | ⏳ planned |
 
@@ -157,6 +158,26 @@ curl -s localhost:5080/api/work-orders/<work-order-id>/labour-lines -H 'Content-
 curl -s -X POST localhost:5080/api/work-orders/<work-order-id>/approve
 ```
 
+### Bays API
+
+| Method & path | Purpose | Responses |
+| --- | --- | --- |
+| `GET /api/bays` | Every bay, in and out of service, ordered by name (unpaged) | 200 |
+| `POST /api/bays` | Add a bay, in service (`name`, unique) | 201 + `Location`, 400, 409, 422 |
+| `GET /api/bays/{id}` | Get one bay | 200, 404 |
+| `PUT /api/bays/{id}` | Rename a bay (`name`, unique) | 200, 400, 404, 409, 422 |
+| `POST /api/bays/{id}/take-out-of-service` | Stop new bookings (lift under repair); booked appointments stay until moved | 200, 404, 409, 422 |
+| `POST /api/bays/{id}/return-to-service` | Take bookings again | 200, 404, 409, 422 |
+
+A bay is the workshop's unit of capacity: one vehicle at a time. Names are
+compared after trimming; a name in use by another bay is `bay.duplicate_name`
+(409). Bays are never deleted.
+
+```bash
+curl -s localhost:5080/api/bays -H 'Content-Type: application/json' -d '{"name":"Lift 1"}'
+curl -s -X POST localhost:5080/api/bays/<bay-id>/take-out-of-service
+```
+
 The endpoint tables above are pinned by
 `OpenApiContractTests` against `/openapi/v1.json`; change both together.
 
@@ -171,9 +192,9 @@ stable `code` to switch on:
 | 400 | `validation.failed` (+ `errors` per field) | body fields missing, blank, too long or out of range |
 | 400 | `request.malformed` | unreadable JSON, wrong value type, unparsable query/route value |
 | 400 | `paging.invalid_page`, `paging.invalid_page_size` | paging out of range |
-| 404 | `customer.not_found`, `vehicle.not_found`, `work_order.not_found`, `work_order.line_not_found` / `route.not_found` | unknown resource / unknown URL |
+| 404 | `customer.not_found`, `vehicle.not_found`, `work_order.not_found`, `work_order.line_not_found`, `bay.not_found` / `route.not_found` | unknown resource / unknown URL |
 | 405, 415 | `request.method_not_allowed`, `request.unsupported_media_type` | wrong method, non-JSON body |
-| 409 | `customer.has_vehicles`, `customer.has_work_orders`, `customer.has_appointments`, `vehicle.duplicate_vin`, `conflict.duplicate`, `conflict.concurrent_update` | conflicts |
+| 409 | `customer.has_vehicles`, `customer.has_work_orders`, `customer.has_appointments`, `vehicle.duplicate_vin`, `bay.duplicate_name`, `conflict.duplicate`, `conflict.concurrent_update` | conflicts |
 | 422 | `domain.rule_violated` | business rule broken |
 | 500 | `server.error` | unexpected failure (no details leaked) |
 

@@ -52,7 +52,8 @@ updated docs. Steps are done in order unless a dependency forces otherwise.
 - [x] Use cases: check in (opens the work order in the same commit), cancel, no-show
 - [x] Customers who booked appointments cannot be deleted (`customer.has_appointments`, 409 instead of a foreign-key 500)
 - [x] Use cases: day schedule (a date in an IANA time zone; every bay by name with the appointments overlapping that day, cancelled ones left out)
-- [ ] Endpoints and tests
+- [x] Bay endpoints and tests: list, create, get, rename, take out of / return to service
+- [ ] Appointment endpoints and tests: book, get, reschedule, check in, cancel, no-show, day schedule
 
 ## Milestone 6 — Invoices
 

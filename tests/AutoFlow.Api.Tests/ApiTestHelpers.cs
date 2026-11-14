@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using AutoFlow.Application.Bays;
 using AutoFlow.Application.Customers;
 using AutoFlow.Application.Vehicles;
 using AutoFlow.Application.WorkOrders;
@@ -17,6 +18,16 @@ internal static class ApiTestHelpers
     /// <summary>A random valid VIN, so tests sharing one database never collide.</summary>
     public static string UniqueVin() =>
         "WVW" + string.Concat(Enumerable.Range(0, 14).Select(_ => VinAlphabet[Random.Shared.Next(VinAlphabet.Length)]));
+
+    /// <summary>A bay name no other test uses.</summary>
+    public static string UniqueBayName() => $"Lift {Guid.NewGuid():N}";
+
+    public static async Task<BayDetails> CreateBayAsync(this HttpClient client, string? name = null)
+    {
+        using var response = await client.PostAsJsonAsync(Url("/api/bays"), new { name = name ?? UniqueBayName() });
+        response.EnsureSuccessStatusCode();
+        return (await response.Content.ReadFromJsonAsync<BayDetails>())!;
+    }
 
     public static async Task<CustomerDetails> CreateCustomerAsync(this HttpClient client, string firstName, string lastName)
     {
