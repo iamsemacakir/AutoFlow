@@ -195,6 +195,8 @@ authentication. Business rules do not live here.
   in UTC. Settling one is a `POST` action per domain transition
   (`/check-in`, `/cancel`, `/no-show`); `/check-in` takes an optional body
   and answers with both the appointment and the work order it opened.
+  `GET /api/schedule?date=…&timeZone=…` is the day schedule; `date` is
+  required, the time zone defaults to UTC.
 - Request records implement `IValidatableRequest` and check their shape
   (required, length, simple bounds, using the domain's constants); each
   endpoint group calls `WithRequestValidation()`, whose filter answers 400

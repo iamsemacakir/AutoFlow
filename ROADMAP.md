@@ -41,7 +41,7 @@ updated docs. Steps are done in order unless a dependency forces otherwise.
 - [x] Use cases: open (from the vehicle's current owner), edit lines (add labour/part, remove), approve, start, complete, cancel, get, list per vehicle (paged, newest first)
 - [x] Endpoints and tests: open and history under the vehicle, get, add/remove lines, approve/start/complete/cancel actions; OpenAPI contract, race and workflow tests
 
-## Milestone 5 — Appointments
+## Milestone 5 — Appointments ✅
 
 - [x] Capacity: `Bay` (one vehicle at a time, in/out of service) and `AppointmentSlot` (UTC, 15-minute grid, half-open overlap); mechanics join as users in milestone 7
 - [x] `Appointment` aggregate: booking (not in the past), double-booking rules per bay and per vehicle, rescheduling, check-in with work order, cancellation, no-show
@@ -55,7 +55,7 @@ updated docs. Steps are done in order unless a dependency forces otherwise.
 - [x] Bay endpoints and tests: list, create, get, rename, take out of / return to service
 - [x] Appointment endpoints and tests: book (under the vehicle), get, reschedule; race test for simultaneous bookings
 - [x] Appointment endpoints and tests: check in (answers with the opened work order), cancel, no-show
-- [ ] Day schedule endpoint, appointment workflow test
+- [x] Day schedule endpoint (`GET /api/schedule`), appointment workflow test (book → move → schedule → check in → work order)
 
 ## Milestone 6 — Invoices
 

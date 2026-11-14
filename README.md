@@ -44,7 +44,7 @@ Early foundation. See [ROADMAP.md](ROADMAP.md) for what is done and what comes n
 | Appointments: bay endpoints (list, create, get, rename, out of / back in service) | ✅ |
 | Appointments: book, get, reschedule endpoints | ✅ |
 | Appointments: check-in, cancel, no-show endpoints | ✅ |
-| Appointments: day schedule endpoint | ⏳ next |
+| Appointments: day schedule endpoint, visit workflow test | ✅ |
 | Invoices | ⏳ planned |
 | Auth, UI, deployment | ⏳ planned |
 
@@ -190,6 +190,7 @@ curl -s -X POST localhost:5080/api/bays/<bay-id>/take-out-of-service
 | `POST /api/appointments/{id}/check-in` | The vehicle has arrived: opens a draft work order (`mileageKm?`, `complaint?`, body optional) and answers with `appointment` and `workOrder` | 200, 400, 404, 409, 422 |
 | `POST /api/appointments/{id}/cancel` | Call off a scheduled appointment (`reason`); the slot is free again | 200, 400, 404, 409, 422 |
 | `POST /api/appointments/{id}/no-show` | The vehicle did not arrive; possible once the slot has begun | 200, 404, 409, 422 |
+| `GET /api/schedule?date=2026-11-20&timeZone=Europe/Berlin` | The day's plan: every bay by name with its appointments in start order (cancelled ones left out) | 200, 400 |
 
 `start` and `end` are ISO 8601 timestamps with an offset (`2026-11-20T09:00:00+01:00`)
 and come back in UTC; slots start and end on a quarter hour, end after they
@@ -206,11 +207,19 @@ Status flow: `Scheduled → CheckedIn`, `Scheduled → Cancelled`,
 to the vehicle's current owner and takes the appointment's purpose as its
 complaint unless one is given.
 
+The schedule reads `date` in the given IANA time zone (default `UTC`) and
+answers with the UTC `start` and `end` of that day — 23 or 25 hours apart when
+clocks change — so an appointment that runs past midnight shows on both days.
+Bays out of service are listed with `isInService: false`; an unknown zone is
+`schedule.unknown_time_zone` (400).
+
 ```bash
 curl -s localhost:5080/api/vehicles/<vehicle-id>/appointments -H 'Content-Type: application/json' \
   -d '{"bayId":"<bay-id>","start":"2026-11-20T09:00:00+01:00","end":"2026-11-20T10:30:00+01:00","purpose":"Annual service"}'
 curl -s localhost:5080/api/appointments/<appointment-id>/reschedule -H 'Content-Type: application/json' \
   -d '{"bayId":"<bay-id>","start":"2026-11-20T13:00:00+01:00","end":"2026-11-20T14:30:00+01:00"}'
+curl -s 'localhost:5080/api/schedule?date=2026-11-20&timeZone=Europe/Berlin'
+curl -s localhost:5080/api/appointments/<appointment-id>/check-in -H 'Content-Type: application/json' -d '{"mileageKm":61480}'
 ```
 
 The endpoint tables above are pinned by
@@ -226,7 +235,7 @@ stable `code` to switch on:
 | --- | --- | --- |
 | 400 | `validation.failed` (+ `errors` per field) | body fields missing, blank, too long or out of range |
 | 400 | `request.malformed` | unreadable JSON, wrong value type, unparsable query/route value |
-| 400 | `paging.invalid_page`, `paging.invalid_page_size` | paging out of range |
+| 400 | `paging.invalid_page`, `paging.invalid_page_size`, `schedule.unknown_time_zone` | paging out of range, unknown time zone |
 | 404 | `customer.not_found`, `vehicle.not_found`, `work_order.not_found`, `work_order.line_not_found`, `bay.not_found`, `appointment.not_found` / `route.not_found` | unknown resource / unknown URL |
 | 405, 415 | `request.method_not_allowed`, `request.unsupported_media_type` | wrong method, non-JSON body |
 | 409 | `customer.has_vehicles`, `customer.has_work_orders`, `customer.has_appointments`, `vehicle.duplicate_vin`, `bay.duplicate_name`, `appointment.bay_out_of_service`, `appointment.bay_already_booked`, `appointment.vehicle_already_booked`, `conflict.duplicate`, `conflict.concurrent_update` | conflicts |

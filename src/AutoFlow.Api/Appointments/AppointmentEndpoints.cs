@@ -85,6 +85,8 @@ public sealed record CancelAppointmentRequest(string? Reason) : IValidatableRequ
 /// <c>/check-in</c> (answers with the appointment and the draft work order
 /// opened for it), <c>/cancel</c> (takes a <c>reason</c>) and
 /// <c>/no-show</c>; settling it twice answers 422.
+/// <c>GET /api/schedule?date=…&amp;timeZone=…</c> is the front desk's view of
+/// one day: every bay with its appointments (ADR 0017).
 /// </summary>
 internal static class AppointmentEndpoints
 {
@@ -149,7 +151,27 @@ internal static class AppointmentEndpoints
             .ProducesProblem(StatusCodes.Status409Conflict)
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
 
+        app.MapGroup("/api/schedule").WithTags(Tag)
+            .MapGet("/", GetDaySchedule)
+            .WithName("GetDaySchedule")
+            .WithSummary("One day's appointments per bay; the day is read in the given IANA time zone (default UTC).")
+            .Produces<DaySchedule>()
+            .ProducesProblem(StatusCodes.Status400BadRequest);
+
         return app;
+    }
+
+    private static async Task<IResult> GetDaySchedule(
+        DateOnly date,
+        string? timeZone,
+        GetDayScheduleHandler handler,
+        CancellationToken cancellationToken)
+    {
+        var result = await handler.HandleAsync(
+            new GetDayScheduleQuery(date, timeZone ?? GetDayScheduleQuery.Utc),
+            cancellationToken);
+
+        return result.Match(value => Results.Ok(value), error => error.ToProblem());
     }
 
     private static async Task<IResult> BookAppointment(
