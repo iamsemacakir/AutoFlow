@@ -1,6 +1,7 @@
 using AutoFlow.Domain.Appointments;
 using AutoFlow.Domain.Bays;
 using AutoFlow.Domain.Customers;
+using AutoFlow.Domain.Invoices;
 using AutoFlow.Domain.Vehicles;
 using AutoFlow.Domain.WorkOrders;
 
@@ -53,4 +54,35 @@ internal static class TestData
 
     public static Appointment Appointment(Guid bayId, Guid vehicleId, Guid customerId, AppointmentSlot slot) =>
         Domain.Appointments.Appointment.Book(bayId, vehicleId, customerId, slot, "Annual service", Now);
+
+    /// <summary>A work order with 239.50 net of labour and parts, taken through to completion.</summary>
+    public static WorkOrder CompletedWorkOrder(Guid vehicleId, Guid customerId)
+    {
+        var workOrder = WorkOrder(vehicleId, customerId);
+        workOrder.AddLabour("Replace front pads and discs", 1.5m, 95m);
+        workOrder.AddPart("0986494", "Brake disc, front", 2m, 48.5m);
+        workOrder.Approve(Now.AddHours(1));
+        workOrder.Start(Now.AddHours(2));
+        workOrder.Complete(Now.AddHours(4));
+        return workOrder;
+    }
+
+    private static int _invoiceYear = 3000;
+
+    /// <summary>
+    /// A year no other test issues invoices in, so sequences never collide in
+    /// the shared database and "the last number of the year" is predictable.
+    /// </summary>
+    public static int UniqueInvoiceYear() => Interlocked.Increment(ref _invoiceYear);
+
+    /// <summary>An invoice with 19 % VAT (285.01 gross), issued on 1 June of <paramref name="year"/>.</summary>
+    public static Invoice Invoice(WorkOrder workOrder, int year, int sequence = 1) =>
+        Domain.Invoices.Invoice.IssueFor(
+            workOrder,
+            sequence,
+            "Anna Schmidt",
+            "Volkswagen Golf (2019), M-AB 123",
+            19m,
+            14,
+            new DateTimeOffset(year, 6, 1, 9, 0, 0, TimeSpan.Zero));
 }

@@ -59,6 +59,12 @@ public class MigrationTests
         Assert.Contains("CONSTRAINT ck_appointments_status", script, StringComparison.Ordinal);
         Assert.Contains("CONSTRAINT ex_appointments_bay_id_slot EXCLUDE USING gist", script, StringComparison.Ordinal);
         Assert.Contains("CONSTRAINT ex_appointments_vehicle_id_slot EXCLUDE USING gist", script, StringComparison.Ordinal);
+        Assert.Contains("CREATE TABLE invoices", script, StringComparison.Ordinal);
+        Assert.Contains("CREATE TABLE invoice_lines", script, StringComparison.Ordinal);
+        Assert.Contains("CREATE TABLE invoice_payments", script, StringComparison.Ordinal);
+        Assert.Contains("CREATE UNIQUE INDEX ux_invoices_year_sequence", script, StringComparison.Ordinal);
+        Assert.Contains("CREATE UNIQUE INDEX ux_invoices_work_order_id", script, StringComparison.Ordinal);
+        Assert.Contains("CONSTRAINT ck_invoices_status", script, StringComparison.Ordinal);
         // xmin is a PostgreSQL system column and must never be created explicitly.
         Assert.DoesNotContain("xmin xid", script, StringComparison.Ordinal);
     }

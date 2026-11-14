@@ -2,6 +2,7 @@ using AutoFlow.Application.Abstractions;
 using AutoFlow.Domain.Appointments;
 using AutoFlow.Domain.Bays;
 using AutoFlow.Domain.Customers;
+using AutoFlow.Domain.Invoices;
 using AutoFlow.Domain.Vehicles;
 using AutoFlow.Domain.WorkOrders;
 using AutoFlow.Infrastructure.Persistence.Configurations;
@@ -27,6 +28,8 @@ public sealed class AutoFlowDbContext(DbContextOptions<AutoFlowDbContext> option
     public DbSet<Bay> Bays => Set<Bay>();
 
     public DbSet<Appointment> Appointments => Set<Appointment>();
+
+    public DbSet<Invoice> Invoices => Set<Invoice>();
 
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
     {
