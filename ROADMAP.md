@@ -61,7 +61,7 @@ updated docs. Steps are done in order unless a dependency forces otherwise.
 
 - [x] `Invoice` aggregate: snapshot of a completed work order, VAT on the net total, year/sequence number, payments (Issued → PartiallyPaid → Paid), due date
 - [x] Persistence: invoice, line and payment tables, migration, consecutive numbering and one invoice per work order by unique indexes, `IInvoiceRepository`
-- [ ] Use cases: issue (marks the work order invoiced), record payment, get, list
+- [x] Use cases: issue (next number of the year, marks the work order invoiced), record payment, get, get for a work order, list (paged, by status and customer)
 - [ ] PDF export
 - [ ] Endpoints and tests
 

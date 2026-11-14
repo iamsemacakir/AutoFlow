@@ -3,6 +3,7 @@ using AutoFlow.Application.Common;
 using AutoFlow.Domain.Appointments;
 using AutoFlow.Domain.Bays;
 using AutoFlow.Domain.Customers;
+using AutoFlow.Domain.Invoices;
 using AutoFlow.Domain.Vehicles;
 using AutoFlow.Domain.WorkOrders;
 
@@ -19,7 +20,8 @@ public sealed class InMemoryStore
     IVehicleRepository,
     IWorkOrderRepository,
     IBayRepository,
-    IAppointmentRepository
+    IAppointmentRepository,
+    IInvoiceRepository
 {
     private readonly Dictionary<Guid, Customer> _customers = [];
     private readonly Dictionary<Guid, Vehicle> _vehicles = [];
@@ -33,7 +35,12 @@ public sealed class InMemoryStore
     private readonly Dictionary<Guid, Appointment> _appointments = [];
     private readonly List<Appointment> _pendingAppointments = [];
 
+    private readonly Dictionary<Guid, Invoice> _invoices = [];
+    private readonly List<Invoice> _pendingInvoices = [];
+
     public int SaveCount { get; private set; }
+
+    public IReadOnlyCollection<Invoice> Invoices => _invoices.Values;
 
     public IReadOnlyCollection<Customer> Customers => _customers.Values;
 
@@ -80,8 +87,17 @@ public sealed class InMemoryStore
         return appointment;
     }
 
+    /// <inheritdoc cref="Seed(Customer)"/>
+    public Invoice Seed(Invoice invoice)
+    {
+        _invoices.Add(invoice.Id, invoice);
+        return invoice;
+    }
+
     public Task SaveChangesAsync(CancellationToken cancellationToken = default)
     {
+        _pendingInvoices.ForEach(i => _invoices.Add(i.Id, i));
+        _pendingInvoices.Clear();
         _pendingCustomers.ForEach(c => _customers.Add(c.Id, c));
         _pendingVehicles.ForEach(v => _vehicles.Add(v.Id, v));
         _pendingWorkOrders.ForEach(w => _workOrders.Add(w.Id, w));
@@ -223,4 +239,37 @@ public sealed class InMemoryStore
         ]);
 
     public void Add(Appointment appointment) => _pendingAppointments.Add(appointment);
+
+    Task<Invoice?> IInvoiceRepository.GetByIdAsync(Guid id, CancellationToken cancellationToken) =>
+        Task.FromResult(_invoices.GetValueOrDefault(id));
+
+    public Task<Invoice?> GetByWorkOrderIdAsync(Guid workOrderId, CancellationToken cancellationToken = default) =>
+        Task.FromResult(_invoices.Values.FirstOrDefault(i => i.WorkOrderId == workOrderId));
+
+    public Task<int> GetLastSequenceAsync(int year, CancellationToken cancellationToken = default) =>
+        Task.FromResult(_invoices.Values.Where(i => i.Year == year).Select(i => i.Sequence).DefaultIfEmpty(0).Max());
+
+    /// <summary>Same filter and ordering as the PostgreSQL repository.</summary>
+    public Task<PagedList<Invoice>> ListAsync(
+        InvoiceStatus? status,
+        Guid? customerId,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var matching = _invoices.Values
+            .Where(i => status is null || i.Status == status)
+            .Where(i => customerId is null || i.CustomerId == customerId)
+            .OrderByDescending(i => i.Year)
+            .ThenByDescending(i => i.Sequence)
+            .ToList();
+
+        return Task.FromResult(new PagedList<Invoice>(
+            [.. matching.Skip(Paging.Offset(page, pageSize)).Take(pageSize)],
+            page,
+            pageSize,
+            matching.Count));
+    }
+
+    public void Add(Invoice invoice) => _pendingInvoices.Add(invoice);
 }

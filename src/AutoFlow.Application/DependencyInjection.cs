@@ -1,6 +1,7 @@
 using AutoFlow.Application.Appointments;
 using AutoFlow.Application.Bays;
 using AutoFlow.Application.Customers;
+using AutoFlow.Application.Invoices;
 using AutoFlow.Application.Vehicles;
 using AutoFlow.Application.WorkOrders;
 using Microsoft.Extensions.DependencyInjection;
@@ -11,15 +12,17 @@ namespace AutoFlow.Application;
 public static class DependencyInjection
 {
     /// <summary>
-    /// Registers the use-case handlers and the system <see cref="TimeProvider"/>.
-    /// Repository and unit-of-work implementations are registered by the
-    /// infrastructure layer.
+    /// Registers the use-case handlers, the system <see cref="TimeProvider"/>
+    /// and the default <see cref="InvoicingSettings"/>, unless the host
+    /// registered its own before. Repository and unit-of-work
+    /// implementations are registered by the infrastructure layer.
     /// </summary>
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);
 
         services.TryAddSingleton(TimeProvider.System);
+        services.TryAddSingleton(InvoicingSettings.Default);
 
         services.AddScoped<RegisterCustomerHandler>();
         services.AddScoped<UpdateCustomerHandler>();
@@ -54,6 +57,11 @@ public static class DependencyInjection
         services.AddScoped<MarkAppointmentNoShowHandler>();
         services.AddScoped<GetAppointmentHandler>();
         services.AddScoped<GetDayScheduleHandler>();
+        services.AddScoped<IssueInvoiceHandler>();
+        services.AddScoped<RecordPaymentHandler>();
+        services.AddScoped<GetInvoiceHandler>();
+        services.AddScoped<GetWorkOrderInvoiceHandler>();
+        services.AddScoped<ListInvoicesHandler>();
 
         return services;
     }

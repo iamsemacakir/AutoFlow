@@ -59,7 +59,7 @@ See [ADR 0002](adr/0002-use-case-handlers-and-result-type.md).
 - One use case = one `XxxCommand` record (`XxxQuery` for read-only use
   cases) + one `XxxHandler` class with a `HandleAsync(command, ct)` method,
   grouped by feature folder (`Customers/`, `Vehicles/`, `WorkOrders/`, `Bays/`,
-  `Appointments/`). No mediator library.
+  `Appointments/`, `Invoices/`). No mediator library.
 - Handlers load aggregates through `ICustomerRepository` / `IVehicleRepository`,
   call domain behaviour, then commit once via `IUnitOfWork.SaveChangesAsync`.
   Loaded entities are tracked, so repositories have no `Update` method.
@@ -110,6 +110,17 @@ See [ADR 0002](adr/0002-use-case-handlers-and-result-type.md).
   cancelled ones are left out. An unknown time zone is
   `schedule.unknown_time_zone` (400). See
   [ADR 0017](adr/0017-day-schedule.md).
+- `IssueInvoiceHandler` bills a completed work order: it reads the last
+  invoice sequence of the year, issues the invoice with the next one (VAT
+  rate and payment term from `InvoicingSettings`, which the host binds from
+  configuration), marks the work order invoiced and commits both together.
+  `RecordPaymentHandler` takes the payment method by name
+  (`invoice.unknown_payment_method`, 400) and returns the whole
+  `InvoiceDetails`, which also says whether the invoice is overdue at the
+  time of the request. `GetInvoiceHandler`, `GetWorkOrderInvoiceHandler`
+  (`invoice.not_issued` when the work order has none yet) and
+  `ListInvoicesHandler` (paged, newest number first, optional status and
+  customer filters) read them.
 - Errors carry a stable `Code` (`customer.not_found`, `vehicle.duplicate_vin`)
   and an `ErrorKind` that the API maps to HTTP status codes
   (Validation → 400, NotFound → 404, Conflict → 409).

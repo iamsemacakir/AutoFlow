@@ -47,7 +47,8 @@ Early foundation. See [ROADMAP.md](ROADMAP.md) for what is done and what comes n
 | Appointments: day schedule endpoint, visit workflow test | ✅ |
 | Invoices: aggregate (work order snapshot, VAT, numbering, payments) | ✅ |
 | Invoices: persistence (lines and payments tables, consecutive numbers, one per work order) | ✅ |
-| Invoices: use cases, PDF export, endpoints | ⏳ next |
+| Invoices: issue, record payment, get, list use cases | ✅ |
+| Invoices: PDF export, endpoints | ⏳ next |
 | Auth, UI, deployment | ⏳ planned |
 
 ## Getting started
