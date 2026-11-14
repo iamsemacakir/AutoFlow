@@ -60,7 +60,7 @@ updated docs. Steps are done in order unless a dependency forces otherwise.
 ## Milestone 6 — Invoices
 
 - [x] `Invoice` aggregate: snapshot of a completed work order, VAT on the net total, year/sequence number, payments (Issued → PartiallyPaid → Paid), due date
-- [ ] Persistence: invoice, line and payment tables, migration, gapless numbering, `IInvoiceRepository`
+- [x] Persistence: invoice, line and payment tables, migration, consecutive numbering and one invoice per work order by unique indexes, `IInvoiceRepository`
 - [ ] Use cases: issue (marks the work order invoiced), record payment, get, list
 - [ ] PDF export
 - [ ] Endpoints and tests

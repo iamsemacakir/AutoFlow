@@ -1,4 +1,5 @@
 using AutoFlow.Domain.Appointments;
+using AutoFlow.Domain.Invoices;
 using AutoFlow.Domain.Vehicles;
 using AutoFlow.Domain.WorkOrders;
 using AutoFlow.Infrastructure.Persistence;
@@ -38,6 +39,34 @@ public class ModelTests
         Assert.Equal(typeof(WorkOrder), ownership.PrincipalEntityType.ClrType);
         Assert.Equal(DeleteBehavior.Cascade, ownership.DeleteBehavior);
         Assert.Equal("work_order_lines", line.GetTableName());
+    }
+
+    [Theory]
+    [InlineData(typeof(InvoiceLine), "invoice_lines")]
+    [InlineData(typeof(InvoicePayment), "invoice_payments")]
+    public void Invoice_lines_and_payments_are_owned_by_their_invoice(Type child, string table)
+    {
+        using var db = CreateContext();
+        var entity = db.Model.FindEntityType(child)!;
+
+        var ownership = entity.FindOwnership();
+
+        Assert.NotNull(ownership);
+        Assert.Equal(typeof(Invoice), ownership.PrincipalEntityType.ClrType);
+        Assert.Equal(DeleteBehavior.Cascade, ownership.DeleteBehavior);
+        Assert.Equal(table, entity.GetTableName());
+    }
+
+    [Fact]
+    public void Invoice_number_and_work_order_are_unique()
+    {
+        using var db = CreateContext();
+        var invoice = db.Model.FindEntityType(typeof(Invoice))!;
+
+        var unique = invoice.GetIndexes().Where(i => i.IsUnique).Select(i => i.GetDatabaseName()).Order().ToArray();
+
+        Assert.Equal(["ux_invoices_work_order_id", "ux_invoices_year_sequence"], unique);
+        Assert.Null(invoice.FindProperty(nameof(Invoice.Number)));
     }
 
     [Fact]

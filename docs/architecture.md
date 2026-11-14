@@ -126,14 +126,15 @@ See [ADR 0002](adr/0002-use-case-handlers-and-result-type.md).
 See [ADR 0003](adr/0003-ef-core-postgresql-persistence.md).
 
 - `AutoFlowDbContext` is the `IUnitOfWork`; `CustomerRepository`,
-  `VehicleRepository`, `WorkOrderRepository`, `BayRepository` and
-  `AppointmentRepository` are internal and only reachable through the
+  `VehicleRepository`, `WorkOrderRepository`, `BayRepository`,
+  `AppointmentRepository` and `InvoiceRepository` are internal and only reachable through the
   application interfaces. `AddInfrastructure(connectionString)` wires them up.
 - Mapping is fluent-only (`Persistence/Configurations/`); the domain carries
   no attributes. Value objects are stored through value converters as their
   normalized string.
 - Database names are snake_case and set explicitly: tables `customers`,
-  `vehicles`, `work_orders`, `work_order_lines`, `bays`, `appointments`; keys `pk_*`, foreign keys `fk_*`, indexes `ix_*`, unique indexes
+  `vehicles`, `work_orders`, `work_order_lines`, `bays`, `appointments`, `invoices`,
+  `invoice_lines`, `invoice_payments`; keys `pk_*`, foreign keys `fk_*`, indexes `ix_*`, unique indexes
   `ux_*`, check constraints `ck_*`, exclusion constraints `ex_*`.
 - Every table uses PostgreSQL `xmin` as an optimistic concurrency token
   (shadow property `Version`).
@@ -154,6 +155,12 @@ See [ADR 0003](adr/0003-ef-core-postgresql-persistence.md).
   of the otherwise generated migration because EF Core cannot model them.
   The unit of work reports their violation like a unique one. See
   [ADR 0015](adr/0015-appointment-persistence-and-exclusion-constraints.md).
+- Invoices are stored in `invoices`, `invoice_lines` and
+  `invoice_payments` (owned collections). The invoice number is `year` +
+  `sequence` under a unique index: the use case takes the highest sequence
+  of the year plus one, and the index rejects a number taken twice, so
+  numbers have no gaps. A second unique index allows one invoice per work
+  order. See [ADR 0019](adr/0019-invoice-persistence-and-numbering.md).
 - Read-only queries (searches, lists) use `AsNoTracking`; owned children
   come with their root (`ListByVehicleAsync` returns work orders with lines). Customer search
   filters with parameterized SQL (`FromSqlRaw`) because the value-converted
