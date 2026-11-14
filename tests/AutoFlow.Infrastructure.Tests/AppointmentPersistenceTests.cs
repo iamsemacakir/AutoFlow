@@ -182,6 +182,35 @@ public class AppointmentPersistenceTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task ListOverlappingAsync_returns_appointments_of_the_period_except_cancelled_ones()
+    {
+        var (bay, customer, vehicle) = await SeedAsync();
+        var (otherBay, otherCustomer, otherVehicle) = await SeedAsync();
+        var fromYesterday = await SeedAppointmentAsync(bay.Id, vehicle.Id, customer.Id, TestData.Slot(-1, 2));
+        var inOtherBay = await SeedAppointmentAsync(otherBay.Id, otherVehicle.Id, otherCustomer.Id, TestData.Slot(9, 1));
+        var intoTomorrow = await SeedAppointmentAsync(bay.Id, vehicle.Id, customer.Id, TestData.Slot(23, 2));
+        await SeedAppointmentAsync(otherBay.Id, otherVehicle.Id, otherCustomer.Id, TestData.Slot(-1, 1)); // ends at midnight
+        await SeedAppointmentAsync(otherBay.Id, otherVehicle.Id, otherCustomer.Id, TestData.Slot(24, 1)); // starts at midnight
+        var cancelled = TestData.Appointment(otherBay.Id, otherVehicle.Id, otherCustomer.Id, TestData.Slot(12, 1));
+        cancelled.Cancel("Customer is ill", TestData.Now);
+        await using (var seedDb = postgres.CreateContext())
+        {
+            seedDb.Appointments.Add(cancelled);
+            await seedDb.SaveChangesAsync();
+        }
+
+        await using var db = postgres.CreateContext();
+        var day = TestData.Slot(0, 24);
+        var listed = await new AppointmentRepository(db).ListOverlappingAsync(day.Start, day.End);
+
+        // Other tests book into the same days; only this test's bays are asserted.
+        Assert.Equal(
+            [fromYesterday.Id, inOtherBay.Id, intoTomorrow.Id],
+            listed.Where(a => a.BayId == bay.Id || a.BayId == otherBay.Id).Select(a => a.Id).ToArray());
+        Assert.Empty(db.ChangeTracker.Entries());
+    }
+
+    [Fact]
     public async Task ExistsForCustomerAsync_is_true_only_for_customers_who_booked()
     {
         var (bay, customer, vehicle) = await SeedAsync();

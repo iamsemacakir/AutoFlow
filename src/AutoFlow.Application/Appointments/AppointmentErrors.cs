@@ -31,4 +31,10 @@ public static class AppointmentErrors
             "appointment.vehicle_already_booked",
             $"The vehicle is already booked {clash.Slot} (appointment '{clash.Id}').");
     }
+
+    /// <summary>The schedule was asked for in a time zone this system does not know.</summary>
+    public static Error UnknownTimeZone(string timeZone) =>
+        Error.Validation(
+            "schedule.unknown_time_zone",
+            $"'{timeZone}' is not a known time zone; use an IANA id such as 'Europe/Berlin'.");
 }

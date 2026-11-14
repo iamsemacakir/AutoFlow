@@ -208,5 +208,19 @@ public sealed class InMemoryStore
                 .ThenBy(a => a.Id),
         ]);
 
+    /// <summary>Same filter and ordering as the PostgreSQL repository.</summary>
+    public Task<IReadOnlyList<Appointment>> ListOverlappingAsync(
+        DateTimeOffset from,
+        DateTimeOffset to,
+        CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<Appointment>>(
+        [
+            .. _appointments.Values
+                .Where(a => a.Status != AppointmentStatus.Cancelled)
+                .Where(a => a.Slot.Start < to && from < a.Slot.End)
+                .OrderBy(a => a.Slot.Start)
+                .ThenBy(a => a.Id),
+        ]);
+
     public void Add(Appointment appointment) => _pendingAppointments.Add(appointment);
 }

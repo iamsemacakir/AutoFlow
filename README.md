@@ -40,7 +40,8 @@ Early foundation. See [ROADMAP.md](ROADMAP.md) for what is done and what comes n
 | Appointments: bay use cases (create, rename, out of / back in service, get, list) | ✅ |
 | Appointments: book, reschedule, get use cases (bay in service, clash checks) | ✅ |
 | Appointments: check-in (opens the work order), cancel, no-show use cases | ✅ |
-| Appointments: day schedule use case, endpoints | ⏳ next |
+| Appointments: day schedule use case (time-zone aware, every bay) | ✅ |
+| Appointments: bay, appointment and schedule endpoints | ⏳ next |
 | Invoices | ⏳ planned |
 | Auth, UI, deployment | ⏳ planned |
 

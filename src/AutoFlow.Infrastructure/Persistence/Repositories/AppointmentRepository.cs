@@ -31,5 +31,23 @@ internal sealed class AppointmentRepository(AutoFlowDbContext db) : IAppointment
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<Appointment>> ListOverlappingAsync(
+        DateTimeOffset from,
+        DateTimeOffset to,
+        CancellationToken cancellationToken = default)
+    {
+        var utcFrom = from.ToUniversalTime();
+        var utcTo = to.ToUniversalTime();
+
+        // Half-open overlap, like AppointmentSlot.Overlaps.
+        return await db.Appointments
+            .AsNoTracking()
+            .Where(a => a.Status != AppointmentStatus.Cancelled)
+            .Where(a => a.Slot.Start < utcTo && utcFrom < a.Slot.End)
+            .OrderBy(a => a.Slot.Start)
+            .ThenBy(a => a.Id)
+            .ToListAsync(cancellationToken);
+    }
+
     public void Add(Appointment appointment) => db.Appointments.Add(appointment);
 }

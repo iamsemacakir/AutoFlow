@@ -96,6 +96,13 @@ See [ADR 0002](adr/0002-use-case-handlers-and-result-type.md).
   an optional odometer reading is recorded on the vehicle) and checks the
   appointment in with it, in one commit, returning both as
   `CheckedInAppointment`.
+- `GetDayScheduleHandler` shows one day as the front desk sees it: a date
+  read in an IANA time zone becomes a UTC period (23 or 25 hours across a
+  daylight-saving change), and every bay, in or out of service, is listed
+  by name with the appointments overlapping that period in start order;
+  cancelled ones are left out. An unknown time zone is
+  `schedule.unknown_time_zone` (400). See
+  [ADR 0017](adr/0017-day-schedule.md).
 - Errors carry a stable `Code` (`customer.not_found`, `vehicle.duplicate_vin`)
   and an `ErrorKind` that the API maps to HTTP status codes
   (Validation → 400, NotFound → 404, Conflict → 409).

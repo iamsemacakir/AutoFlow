@@ -51,7 +51,7 @@ updated docs. Steps are done in order unless a dependency forces otherwise.
 - [x] Use cases: book (for the current owner), reschedule, get; bay in service and clash checks as 409 conflicts
 - [x] Use cases: check in (opens the work order in the same commit), cancel, no-show
 - [x] Customers who booked appointments cannot be deleted (`customer.has_appointments`, 409 instead of a foreign-key 500)
-- [ ] Use cases: day schedule
+- [x] Use cases: day schedule (a date in an IANA time zone; every bay by name with the appointments overlapping that day, cancelled ones left out)
 - [ ] Endpoints and tests
 
 ## Milestone 6 — Invoices
