@@ -43,7 +43,8 @@ Early foundation. See [ROADMAP.md](ROADMAP.md) for what is done and what comes n
 | Appointments: day schedule use case (time-zone aware, every bay) | ✅ |
 | Appointments: bay endpoints (list, create, get, rename, out of / back in service) | ✅ |
 | Appointments: book, get, reschedule endpoints | ✅ |
-| Appointments: check-in, cancel, no-show and day schedule endpoints | ⏳ next |
+| Appointments: check-in, cancel, no-show endpoints | ✅ |
+| Appointments: day schedule endpoint | ⏳ next |
 | Invoices | ⏳ planned |
 | Auth, UI, deployment | ⏳ planned |
 
@@ -186,6 +187,9 @@ curl -s -X POST localhost:5080/api/bays/<bay-id>/take-out-of-service
 | `POST /api/vehicles/{vehicleId}/appointments` | Book a bay for the vehicle's current owner (`bayId`, `start`, `end`, `purpose`) | 201 + `Location`, 400, 404, 409, 422 |
 | `GET /api/appointments/{id}` | Get one appointment, in any status | 200, 404 |
 | `POST /api/appointments/{id}/reschedule` | Move a scheduled appointment (`bayId` — the current one to change only the time —, `start`, `end`) | 200, 400, 404, 409, 422 |
+| `POST /api/appointments/{id}/check-in` | The vehicle has arrived: opens a draft work order (`mileageKm?`, `complaint?`, body optional) and answers with `appointment` and `workOrder` | 200, 400, 404, 409, 422 |
+| `POST /api/appointments/{id}/cancel` | Call off a scheduled appointment (`reason`); the slot is free again | 200, 400, 404, 409, 422 |
+| `POST /api/appointments/{id}/no-show` | The vehicle did not arrive; possible once the slot has begun | 200, 404, 409, 422 |
 
 `start` and `end` are ISO 8601 timestamps with an offset (`2026-11-20T09:00:00+01:00`)
 and come back in UTC; slots start and end on a quarter hour, end after they
@@ -195,6 +199,12 @@ bay or vehicle already booked for part of the slot is
 `appointment.bay_already_booked` / `appointment.vehicle_already_booked` (all
 409, naming the appointment in the way). Back-to-back slots (one ends at
 10:00, the next starts at 10:00) do not clash.
+
+Status flow: `Scheduled → CheckedIn`, `Scheduled → Cancelled`,
+`Scheduled → NoShow`; only a scheduled appointment can be moved or settled
+(422 otherwise). Checking in is the intake: the work order it opens belongs
+to the vehicle's current owner and takes the appointment's purpose as its
+complaint unless one is given.
 
 ```bash
 curl -s localhost:5080/api/vehicles/<vehicle-id>/appointments -H 'Content-Type: application/json' \

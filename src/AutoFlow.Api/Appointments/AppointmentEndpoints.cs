@@ -2,6 +2,7 @@ using AutoFlow.Api.Errors;
 using AutoFlow.Api.Validation;
 using AutoFlow.Application.Appointments;
 using AutoFlow.Domain.Appointments;
+using AutoFlow.Domain.WorkOrders;
 
 namespace AutoFlow.Api.Appointments;
 
@@ -44,6 +45,34 @@ public sealed record RescheduleAppointmentRequest(Guid? BayId, DateTimeOffset? S
 }
 
 /// <summary>
+/// Optional request body for checking a vehicle in: the odometer reading at
+/// arrival (also recorded on the vehicle) and what the customer reports at
+/// the counter (else the appointment's purpose becomes the complaint).
+/// </summary>
+public sealed record CheckInAppointmentRequest(int? MileageKm, string? Complaint) : IValidatableRequest
+{
+    public void Validate(ValidationErrors errors)
+    {
+        ArgumentNullException.ThrowIfNull(errors);
+
+        // A reading below the vehicle's last one is a business rule (422).
+        errors.OptionalAtLeast("mileageKm", MileageKm, 0);
+        errors.OptionalText("complaint", Complaint, WorkOrder.ComplaintMaxLength);
+    }
+}
+
+/// <summary>Request body for calling off a scheduled appointment.</summary>
+public sealed record CancelAppointmentRequest(string? Reason) : IValidatableRequest
+{
+    public void Validate(ValidationErrors errors)
+    {
+        ArgumentNullException.ThrowIfNull(errors);
+
+        errors.RequireText("reason", Reason, Appointment.CancellationReasonMaxLength);
+    }
+}
+
+/// <summary>
 /// Appointments are booked under the vehicle that is brought in
 /// (<c>POST /api/vehicles/{vehicleId}/appointments</c>) and addressed on
 /// their own afterwards (<c>/api/appointments/{id}</c>), like work orders,
@@ -51,7 +80,11 @@ public sealed record RescheduleAppointmentRequest(Guid? BayId, DateTimeOffset? S
 /// (<c>/reschedule</c>) because it is checked against the other
 /// appointments, not a plain replacement. A bay out of service or a clash
 /// with another appointment answers 409 with a specific code; a slot off the
-/// 15-minute grid or in the past answers 422.
+/// 15-minute grid or in the past answers 422. A scheduled appointment is
+/// settled by one of three actions named after the domain methods:
+/// <c>/check-in</c> (answers with the appointment and the draft work order
+/// opened for it), <c>/cancel</c> (takes a <c>reason</c>) and
+/// <c>/no-show</c>; settling it twice answers 422.
 /// </summary>
 internal static class AppointmentEndpoints
 {
@@ -86,6 +119,32 @@ internal static class AppointmentEndpoints
             .WithSummary("Moves a scheduled appointment to another slot, another bay, or both.")
             .Produces<AppointmentDetails>()
             .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
+
+        appointments.MapPost("/{id:guid}/check-in", CheckInAppointment)
+            .WithName("CheckInAppointment")
+            .WithSummary("The vehicle has arrived: opens a draft work order for it and checks the appointment in.")
+            .Produces<CheckedInAppointment>()
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
+
+        appointments.MapPost("/{id:guid}/cancel", CancelAppointment)
+            .WithName("CancelAppointment")
+            .WithSummary("Calls off a scheduled appointment, with a reason; its slot is free again at once.")
+            .Produces<AppointmentDetails>()
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
+
+        appointments.MapPost("/{id:guid}/no-show", MarkAppointmentNoShow)
+            .WithName("MarkAppointmentNoShow")
+            .WithSummary("Records that the vehicle did not arrive, once the slot has begun.")
+            .Produces<AppointmentDetails>()
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict)
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
@@ -132,6 +191,40 @@ internal static class AppointmentEndpoints
         var result = await handler.HandleAsync(
             new RescheduleAppointmentCommand(id, request.BayId!.Value, request.Start!.Value, request.End!.Value),
             cancellationToken);
+
+        return result.Match(value => Results.Ok(value), error => error.ToProblem());
+    }
+
+    private static async Task<IResult> CheckInAppointment(
+        Guid id,
+        CheckInAppointmentRequest? request,
+        CheckInAppointmentHandler handler,
+        CancellationToken cancellationToken)
+    {
+        var result = await handler.HandleAsync(
+            new CheckInAppointmentCommand(id, request?.MileageKm, request?.Complaint),
+            cancellationToken);
+
+        return result.Match(value => Results.Ok(value), error => error.ToProblem());
+    }
+
+    private static async Task<IResult> CancelAppointment(
+        Guid id,
+        CancelAppointmentRequest request,
+        CancelAppointmentHandler handler,
+        CancellationToken cancellationToken)
+    {
+        var result = await handler.HandleAsync(new CancelAppointmentCommand(id, request.Reason!), cancellationToken);
+
+        return result.Match(value => Results.Ok(value), error => error.ToProblem());
+    }
+
+    private static async Task<IResult> MarkAppointmentNoShow(
+        Guid id,
+        MarkAppointmentNoShowHandler handler,
+        CancellationToken cancellationToken)
+    {
+        var result = await handler.HandleAsync(new MarkAppointmentNoShowCommand(id), cancellationToken);
 
         return result.Match(value => Results.Ok(value), error => error.ToProblem());
     }

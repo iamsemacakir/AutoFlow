@@ -192,7 +192,9 @@ authentication. Business rules do not live here.
   `/api/appointments/{id}` afterwards; moving one is the `/reschedule`
   action, since it is checked against other appointments rather than
   replacing a value. Timestamps in requests carry an offset and come back
-  in UTC.
+  in UTC. Settling one is a `POST` action per domain transition
+  (`/check-in`, `/cancel`, `/no-show`); `/check-in` takes an optional body
+  and answers with both the appointment and the work order it opened.
 - Request records implement `IValidatableRequest` and check their shape
   (required, length, simple bounds, using the domain's constants); each
   endpoint group calls `WithRequestValidation()`, whose filter answers 400
@@ -258,7 +260,8 @@ on `title` or `detail`. See
 - Timestamps are UTC `DateTimeOffset`s, stored as `timestamptz`.
 - API tests that touch data host the whole application with
   `WebApplicationFactory` against their own PostgreSQL container
-  (`ApiDatabaseFixture`); nothing is faked. Besides per-endpoint tests there
+  (`ApiDatabaseFixture`); nothing is faked, except that a test which needs
+  time to pass swaps the clock for a `ShiftedTimeProvider`. Besides per-endpoint tests there
   are three kinds: `OpenApiContractTests` pin every operation's id, path and
   statuses in the OpenAPI document; `ConcurrentRequestTests` fire competing
   requests at once and assert invariants that hold for every interleaving

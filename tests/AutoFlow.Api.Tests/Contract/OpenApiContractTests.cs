@@ -49,6 +49,9 @@ public sealed class OpenApiContractTests(WebApplicationFactory<Program> factory)
         { "BookAppointment", "POST", "/api/vehicles/{vehicleId}/appointments", "201 400 404 409 422" },
         { "GetAppointment", "GET", "/api/appointments/{id}", "200 404" },
         { "RescheduleAppointment", "POST", "/api/appointments/{id}/reschedule", "200 400 404 409 422" },
+        { "CheckInAppointment", "POST", "/api/appointments/{id}/check-in", "200 400 404 409 422" },
+        { "CancelAppointment", "POST", "/api/appointments/{id}/cancel", "200 400 404 409 422" },
+        { "MarkAppointmentNoShow", "POST", "/api/appointments/{id}/no-show", "200 404 409 422" },
     };
 
     [Theory]
@@ -116,6 +119,7 @@ public sealed class OpenApiContractTests(WebApplicationFactory<Program> factory)
         "AppointmentDetails",
         "bayId bookedAt cancellationReason cancelledAt checkedInAt customerId end id noShowAt purpose " +
         "rescheduledAt start status vehicleId workOrderId")]
+    [InlineData("CheckedInAppointment", "appointment workOrder")]
     [InlineData("WorkOrderLineDetails", "description id kind number partNumber quantity total unitPrice")]
     public async Task Read_models_are_documented_with_camel_case_properties(string schema, string properties)
     {
