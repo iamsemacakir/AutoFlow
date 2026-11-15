@@ -3,6 +3,7 @@ using AutoFlow.Application.Appointments;
 using AutoFlow.Application.Bays;
 using AutoFlow.Application.Customers;
 using AutoFlow.Application.Invoices;
+using AutoFlow.Application.Users;
 using AutoFlow.Application.Tests.Fakes;
 using AutoFlow.Application.Vehicles;
 using AutoFlow.Application.WorkOrders;
@@ -24,6 +25,9 @@ public class DependencyInjectionTests
             .AddSingleton<IAppointmentRepository>(store)
             .AddSingleton<IInvoiceRepository>(store)
             .AddSingleton<IInvoiceDocumentRenderer>(new StubInvoiceRenderer())
+            .AddSingleton<IUserRepository>(store)
+            .AddSingleton<IPasswordHasher>(new FakePasswordHasher())
+            .AddSingleton<IAccessTokenIssuer>(new FakeAccessTokenIssuer())
             .AddSingleton<IUnitOfWork>(store)
             .AddApplication();
 
@@ -73,6 +77,15 @@ public class DependencyInjectionTests
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<GetWorkOrderInvoiceHandler>());
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<ListInvoicesHandler>());
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<ExportInvoiceHandler>());
+        Assert.NotNull(scope.ServiceProvider.GetRequiredService<SignInHandler>());
+        Assert.NotNull(scope.ServiceProvider.GetRequiredService<EnsureInitialOwnerHandler>());
+        Assert.NotNull(scope.ServiceProvider.GetRequiredService<CreateUserHandler>());
+        Assert.NotNull(scope.ServiceProvider.GetRequiredService<GetUserHandler>());
+        Assert.NotNull(scope.ServiceProvider.GetRequiredService<ListUsersHandler>());
+        Assert.NotNull(scope.ServiceProvider.GetRequiredService<ChangeUserRoleHandler>());
+        Assert.NotNull(scope.ServiceProvider.GetRequiredService<DeactivateUserHandler>());
+        Assert.NotNull(scope.ServiceProvider.GetRequiredService<ReactivateUserHandler>());
+        Assert.NotNull(scope.ServiceProvider.GetRequiredService<ChangePasswordHandler>());
         Assert.Same(TimeProvider.System, provider.GetRequiredService<TimeProvider>());
     }
 

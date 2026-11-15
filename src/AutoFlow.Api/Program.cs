@@ -1,8 +1,11 @@
 using AutoFlow.Api.Appointments;
+using AutoFlow.Api.Auth;
 using AutoFlow.Api.Bays;
 using AutoFlow.Api.Customers;
 using AutoFlow.Api.Errors;
+using AutoFlow.Api.Hosting;
 using AutoFlow.Api.Invoices;
+using AutoFlow.Api.Users;
 using AutoFlow.Api.Vehicles;
 using AutoFlow.Api.WorkOrders;
 using AutoFlow.Application;
@@ -27,6 +30,11 @@ builder.Services.AddSingleton(invoicing.Validated());
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(connectionString);
 
+// A missing or short signing key stops the host here, like a missing connection string.
+builder.Services.AddAutoFlowAuthentication(builder.Configuration);
+builder.Services.AddAuthorizationBuilder().AddAutoFlowPolicies();
+builder.Services.AddHostedService<DatabaseInitializer>();
+
 builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails(options => options.CustomizeProblemDetails = ProblemDetailsConventions.Apply);
 builder.Services.AddExceptionHandler<BadRequestExceptionHandler>();
@@ -45,6 +53,9 @@ app.UseExceptionHandler();
 // Bodiless 4xx/5xx answers (unmatched route, wrong method) become problem responses too.
 app.UseStatusCodePages();
 
+app.UseAuthentication();
+app.UseAuthorization();
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
@@ -58,6 +69,8 @@ app.MapWorkOrderEndpoints();
 app.MapBayEndpoints();
 app.MapAppointmentEndpoints();
 app.MapInvoiceEndpoints();
+app.MapAuthEndpoints();
+app.MapUserEndpoints();
 
 app.MapGet("/", () => Results.Ok(new { name = "AutoFlow API", status = "running" }))
     .WithName("GetApiInfo")

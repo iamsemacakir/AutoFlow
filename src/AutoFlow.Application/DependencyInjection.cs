@@ -2,6 +2,7 @@ using AutoFlow.Application.Appointments;
 using AutoFlow.Application.Bays;
 using AutoFlow.Application.Customers;
 using AutoFlow.Application.Invoices;
+using AutoFlow.Application.Users;
 using AutoFlow.Application.Vehicles;
 using AutoFlow.Application.WorkOrders;
 using Microsoft.Extensions.DependencyInjection;
@@ -63,6 +64,15 @@ public static class DependencyInjection
         services.AddScoped<GetWorkOrderInvoiceHandler>();
         services.AddScoped<ListInvoicesHandler>();
         services.AddScoped<ExportInvoiceHandler>();
+        services.AddScoped<SignInHandler>();
+        services.AddScoped<EnsureInitialOwnerHandler>();
+        services.AddScoped<CreateUserHandler>();
+        services.AddScoped<GetUserHandler>();
+        services.AddScoped<ListUsersHandler>();
+        services.AddScoped<ChangeUserRoleHandler>();
+        services.AddScoped<DeactivateUserHandler>();
+        services.AddScoped<ReactivateUserHandler>();
+        services.AddScoped<ChangePasswordHandler>();
 
         return services;
     }

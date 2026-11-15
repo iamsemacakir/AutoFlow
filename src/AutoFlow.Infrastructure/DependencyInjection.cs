@@ -2,6 +2,7 @@ using AutoFlow.Application.Abstractions;
 using AutoFlow.Infrastructure.Documents;
 using AutoFlow.Infrastructure.Persistence;
 using AutoFlow.Infrastructure.Persistence.Repositories;
+using AutoFlow.Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -32,8 +33,10 @@ public static class DependencyInjection
         services.AddScoped<IBayRepository, BayRepository>();
         services.AddScoped<IAppointmentRepository, AppointmentRepository>();
         services.AddScoped<IInvoiceRepository, InvoiceRepository>();
+        services.AddScoped<IUserRepository, UserRepository>();
 
         services.AddSingleton<IInvoiceDocumentRenderer, PdfInvoiceRenderer>();
+        services.AddSingleton<IPasswordHasher, Pbkdf2PasswordHasher>();
 
         return services;
     }

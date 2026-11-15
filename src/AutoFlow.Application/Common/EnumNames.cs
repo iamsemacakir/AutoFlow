@@ -1,4 +1,4 @@
-namespace AutoFlow.Application.Invoices;
+namespace AutoFlow.Application.Common;
 
 /// <summary>
 /// Reads an enum value from the name the API exposes it by. Unlike

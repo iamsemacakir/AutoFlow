@@ -11,6 +11,8 @@ public static class ProblemCodes
     public const string MalformedRequest = "request.malformed";
     public const string UnsupportedMediaType = "request.unsupported_media_type";
     public const string MethodNotAllowed = "request.method_not_allowed";
+    public const string Unauthenticated = "auth.unauthenticated";
+    public const string Forbidden = "auth.forbidden";
     public const string RouteNotFound = "route.not_found";
     public const string BusinessRuleViolated = "domain.rule_violated";
     public const string ServerError = "server.error";
@@ -20,6 +22,8 @@ public static class ProblemCodes
     public static string ForStatus(int status) => status switch
     {
         StatusCodes.Status400BadRequest => MalformedRequest,
+        StatusCodes.Status401Unauthorized => Unauthenticated,
+        StatusCodes.Status403Forbidden => Forbidden,
         StatusCodes.Status404NotFound => RouteNotFound,
         StatusCodes.Status405MethodNotAllowed => MethodNotAllowed,
         StatusCodes.Status415UnsupportedMediaType => UnsupportedMediaType,

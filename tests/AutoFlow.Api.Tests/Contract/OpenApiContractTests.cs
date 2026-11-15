@@ -59,6 +59,15 @@ public sealed class OpenApiContractTests(WebApplicationFactory<Program> factory)
         { "GetInvoice", "GET", "/api/invoices/{id}", "200 404" },
         { "ExportInvoicePdf", "GET", "/api/invoices/{id}/pdf", "200 404" },
         { "RecordPayment", "POST", "/api/invoices/{id}/payments", "200 400 404 409 422" },
+        { "SignIn", "POST", "/api/auth/token", "200 400 401" },
+        { "GetCurrentUser", "GET", "/api/auth/me", "200 401" },
+        { "ChangePassword", "POST", "/api/auth/me/password", "204 400 401 422" },
+        { "ListUsers", "GET", "/api/users", "200 401 403" },
+        { "GetUser", "GET", "/api/users/{id}", "200 401 403 404" },
+        { "CreateUser", "POST", "/api/users", "201 400 401 403 409 422" },
+        { "ChangeUserRole", "PUT", "/api/users/{id}/role", "200 400 401 403 404 409" },
+        { "DeactivateUser", "POST", "/api/users/{id}/deactivate", "200 401 403 404 409 422" },
+        { "ReactivateUser", "POST", "/api/users/{id}/reactivate", "200 401 403 404 409 422" },
     };
 
     [Theory]
@@ -135,6 +144,8 @@ public sealed class OpenApiContractTests(WebApplicationFactory<Program> factory)
         "paidAt payments status vatAmount vatRatePercent vehicleDescription workOrderId")]
     [InlineData("InvoiceLineDetails", "description kind number partNumber quantity total unitPrice")]
     [InlineData("InvoicePaymentDetails", "amount id method receivedAt")]
+    [InlineData("UserDetails", "createdAt displayName email id isActive lastSignInAt role")]
+    [InlineData("SignedIn", "accessToken expiresAt tokenType user")]
     [InlineData("WorkOrderLineDetails", "description id kind number partNumber quantity total unitPrice")]
     public async Task Read_models_are_documented_with_camel_case_properties(string schema, string properties)
     {
