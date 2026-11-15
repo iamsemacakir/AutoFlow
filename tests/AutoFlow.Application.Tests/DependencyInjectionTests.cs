@@ -2,6 +2,7 @@ using AutoFlow.Application.Abstractions;
 using AutoFlow.Application.Appointments;
 using AutoFlow.Application.Bays;
 using AutoFlow.Application.Customers;
+using AutoFlow.Application.Invoices;
 using AutoFlow.Application.Tests.Fakes;
 using AutoFlow.Application.Vehicles;
 using AutoFlow.Application.WorkOrders;
@@ -21,6 +22,8 @@ public class DependencyInjectionTests
             .AddSingleton<IWorkOrderRepository>(store)
             .AddSingleton<IBayRepository>(store)
             .AddSingleton<IAppointmentRepository>(store)
+            .AddSingleton<IInvoiceRepository>(store)
+            .AddSingleton<IInvoiceDocumentRenderer>(new StubInvoiceRenderer())
             .AddSingleton<IUnitOfWork>(store)
             .AddApplication();
 
@@ -64,6 +67,12 @@ public class DependencyInjectionTests
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<MarkAppointmentNoShowHandler>());
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<GetAppointmentHandler>());
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<GetDayScheduleHandler>());
+        Assert.NotNull(scope.ServiceProvider.GetRequiredService<IssueInvoiceHandler>());
+        Assert.NotNull(scope.ServiceProvider.GetRequiredService<RecordPaymentHandler>());
+        Assert.NotNull(scope.ServiceProvider.GetRequiredService<GetInvoiceHandler>());
+        Assert.NotNull(scope.ServiceProvider.GetRequiredService<GetWorkOrderInvoiceHandler>());
+        Assert.NotNull(scope.ServiceProvider.GetRequiredService<ListInvoicesHandler>());
+        Assert.NotNull(scope.ServiceProvider.GetRequiredService<ExportInvoiceHandler>());
         Assert.Same(TimeProvider.System, provider.GetRequiredService<TimeProvider>());
     }
 

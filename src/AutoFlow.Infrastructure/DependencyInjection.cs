@@ -1,4 +1,5 @@
 using AutoFlow.Application.Abstractions;
+using AutoFlow.Infrastructure.Documents;
 using AutoFlow.Infrastructure.Persistence;
 using AutoFlow.Infrastructure.Persistence.Repositories;
 using Microsoft.EntityFrameworkCore;
@@ -11,7 +12,9 @@ public static class DependencyInjection
     /// <summary>
     /// Registers <see cref="AutoFlowDbContext"/> on PostgreSQL and the
     /// repository and unit-of-work implementations the application layer
-    /// depends on. All are scoped, so one request shares one context.
+    /// depends on. All are scoped, so one request shares one context. The
+    /// invoice PDF renderer holds no state and is a singleton; it takes the
+    /// <see cref="TimeProvider"/> the application layer registers.
     /// </summary>
     public static IServiceCollection AddInfrastructure(
         this IServiceCollection services,
@@ -29,6 +32,8 @@ public static class DependencyInjection
         services.AddScoped<IBayRepository, BayRepository>();
         services.AddScoped<IAppointmentRepository, AppointmentRepository>();
         services.AddScoped<IInvoiceRepository, InvoiceRepository>();
+
+        services.AddSingleton<IInvoiceDocumentRenderer, PdfInvoiceRenderer>();
 
         return services;
     }
