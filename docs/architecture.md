@@ -263,7 +263,9 @@ authentication. Business rules do not live here.
   `AuthorizationMatrixTests` pins the policy of every named endpoint.
   `/api/auth/token`, `/health` and the OpenAPI document are the only
   anonymous paths. `DatabaseInitializer` applies migrations
-  and creates the initial owner on start when configured to.
+  and creates the initial owner on start when configured to, and
+  `DemoDataSeeder` fills an empty database with an invented demo workshop
+  (`Seed:DemoData`).
 - JSON numbers are strict (`JsonNumberHandling.Strict`): amounts and
   mileages are JSON numbers both ways, and the OpenAPI document says so.
   `web/openapi.json` is a committed copy of that document, from which the

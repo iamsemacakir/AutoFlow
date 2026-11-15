@@ -68,6 +68,18 @@ dotnet test
 dotnet run --project src/AutoFlow.Api   # http://localhost:5080
 ```
 
+### Demo workshop
+
+Set `Seed__DemoData=true` (the Docker Compose setup below does) and the API
+fills an empty database on start with an invented workshop: four bays (one
+out of service), eight customers with their cars, today's and tomorrow's
+appointments in every status, work orders from estimate to invoiced, and
+paid, part-paid and overdue invoices. The day is planned around the moment
+of start in `Seed__TimeZone` (default `Europe/Berlin`). Besides the initial
+owner it opens `advisor@autoflow.demo` and `mechanic@autoflow.demo` with the
+password `Seed__StaffPassword` (default `autoflow-demo`). Once a customer
+exists nothing is seeded, so a real installation is never touched.
+
 ### Web client
 
 The React + TypeScript client lives in `web/` (Node.js 22). With the API

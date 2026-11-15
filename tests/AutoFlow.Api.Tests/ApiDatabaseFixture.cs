@@ -4,6 +4,7 @@ using AutoFlow.Application.Users;
 using AutoFlow.Domain.Users;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Npgsql;
 using Testcontainers.PostgreSql;
 
 namespace AutoFlow.Api.Tests;
@@ -49,6 +50,16 @@ public sealed class ApiDatabaseFixture : IAsyncLifetime
     }
 
     public AuthenticationHeaderValue AuthorizationFor(UserRole role) => new("Bearer", _tokens[role]);
+
+    /// <summary>
+    /// The connection string of another, still empty database in the same
+    /// container, for tests that need a fresh installation.
+    /// </summary>
+    public string ConnectionStringForNewDatabase() =>
+        new NpgsqlConnectionStringBuilder(_postgres.GetConnectionString())
+        {
+            Database = $"autoflow_{Guid.NewGuid():N}",
+        }.ConnectionString;
 
     public async Task InitializeAsync()
     {
