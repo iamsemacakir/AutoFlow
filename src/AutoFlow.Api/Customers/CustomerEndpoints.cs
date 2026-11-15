@@ -1,3 +1,4 @@
+using AutoFlow.Api.Auth;
 using AutoFlow.Api.Errors;
 using AutoFlow.Api.Validation;
 using AutoFlow.Application.Common;
@@ -36,18 +37,24 @@ internal static class CustomerEndpoints
 
         customers.MapGet("/", ListCustomers)
             .WithName("ListCustomers")
+            .RequireAuthorization(Policies.Staff)
+            .ProducesAuthProblems()
             .WithSummary("Lists customers page by page, optionally filtered by a search text.")
             .Produces<PagedList<CustomerDetails>>()
             .ProducesProblem(StatusCodes.Status400BadRequest);
 
         customers.MapGet("/{id:guid}", GetCustomer)
             .WithName(GetCustomerRoute)
+            .RequireAuthorization(Policies.Staff)
+            .ProducesAuthProblems()
             .WithSummary("Gets a customer.")
             .Produces<CustomerDetails>()
             .ProducesProblem(StatusCodes.Status404NotFound);
 
         customers.MapPost("/", CreateCustomer)
             .WithName("CreateCustomer")
+            .RequireAuthorization(Policies.FrontDesk)
+            .ProducesAuthProblems()
             .WithSummary("Registers a new customer.")
             .Produces<CustomerDetails>(StatusCodes.Status201Created)
             .ProducesValidationProblem()
@@ -55,6 +62,8 @@ internal static class CustomerEndpoints
 
         customers.MapPut("/{id:guid}", UpdateCustomer)
             .WithName("UpdateCustomer")
+            .RequireAuthorization(Policies.FrontDesk)
+            .ProducesAuthProblems()
             .WithSummary("Replaces a customer's name and contact details.")
             .Produces<CustomerDetails>()
             .ProducesValidationProblem()
@@ -64,6 +73,8 @@ internal static class CustomerEndpoints
 
         customers.MapDelete("/{id:guid}", DeleteCustomer)
             .WithName("DeleteCustomer")
+            .RequireAuthorization(Policies.FrontDesk)
+            .ProducesAuthProblems()
             .WithSummary("Deletes a customer who owns no vehicles and has no work orders.")
             .Produces(StatusCodes.Status204NoContent)
             .ProducesProblem(StatusCodes.Status404NotFound)

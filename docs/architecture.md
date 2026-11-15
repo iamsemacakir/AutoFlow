@@ -51,6 +51,11 @@ paid (`RecordPayment`: `Issued → PartiallyPaid → Paid`, never more than the
 open balance). VAT is calculated once on the net total. See
 [ADR 0018](adr/0018-invoice-aggregate.md).
 
+Staff sign in with a `User` account: an e-mail login, one `UserRole`
+(`Owner`, `ServiceAdvisor`, `Mechanic`), a password hash and an active
+flag. The domain enforces the `PasswordPolicy` but never sees a password.
+See [ADR 0021](adr/0021-staff-accounts-and-bearer-tokens.md).
+
 **Application** — orchestrates use cases, defines repository interfaces the
 infrastructure implements. Expected failures (not found, duplicate VIN) are
 returned as results; exceptions are reserved for broken invariants and bugs.
@@ -121,9 +126,16 @@ See [ADR 0002](adr/0002-use-case-handlers-and-result-type.md).
   (`invoice.not_issued` when the work order has none yet) and
   `ListInvoicesHandler` (paged, newest number first, optional status and
   customer filters) read them.
+- `SignInHandler` checks a password through the `IPasswordHasher` port and
+  issues a token through `IAccessTokenIssuer`; every failure is the same
+  `auth.invalid_credentials` (`ErrorKind.Unauthorized`, 401). Owners manage
+  accounts with `CreateUserHandler`, `ChangeUserRoleHandler`,
+  `DeactivateUserHandler` and `ReactivateUserHandler`, which keep at least
+  one active owner; `EnsureInitialOwnerHandler` creates the first owner
+  of an empty installation.
 - Errors carry a stable `Code` (`customer.not_found`, `vehicle.duplicate_vin`)
   and an `ErrorKind` that the API maps to HTTP status codes
-  (Validation → 400, NotFound → 404, Conflict → 409).
+  (Validation → 400, Unauthorized → 401, NotFound → 404, Conflict → 409).
 - Lists are paged: queries take a 1-based `Page` and a `PageSize`
   (`Paging.DefaultPageSize` 20, `Paging.MaxPageSize` 100, checked by
   `Paging.Validate`) and return a `PagedList<T>` with the total count.
@@ -176,6 +188,8 @@ See [ADR 0003](adr/0003-ef-core-postgresql-persistence.md).
   `IInvoiceDocumentRenderer` port by writing PDF directly (standard fonts,
   no library, no native dependency); `ExportInvoiceHandler` uses it. See
   [ADR 0020](adr/0020-invoice-pdf-export.md).
+- `Pbkdf2PasswordHasher` hashes passwords with PBKDF2-HMAC-SHA512 from the
+  base class library; `users` has a unique e-mail index.
 - Read-only queries (searches, lists) use `AsNoTracking`; owned children
   come with their root (`ListByVehicleAsync` returns work orders with lines). Customer search
   filters with parameterized SQL (`FromSqlRaw`) because the value-converted
@@ -239,6 +253,17 @@ authentication. Business rules do not live here.
   Numbers and ids in requests are nullable so a missing field is not `0`.
   See [ADR 0008](adr/0008-request-validation-and-problem-responses.md).
 
+- Authentication is JWT bearer (`Auth/`): `JwtAccessTokenIssuer` signs
+  tokens with `Auth:SigningKey`, and every request re-reads the account so
+  deactivation and role changes apply at once. Endpoints name an
+  authorization policy (`Policies.Staff`, `FrontDesk`, `ManageWorkshop`)
+  and document 401/403 with `ProducesAuthProblems()`. A fallback policy
+  requires a signed-in user for anything without a policy of its own, so a
+  new endpoint is closed until someone decides otherwise;
+  `AuthorizationMatrixTests` pins the policy of every named endpoint.
+  `/api/auth/token`, `/health` and the OpenAPI document are the only
+  anonymous paths. `DatabaseInitializer` applies migrations
+  and creates the initial owner on start when configured to.
 - `Program.cs` is the composition root: `AddApplication()` plus
   `AddInfrastructure(ConnectionStrings:AutoFlow)`. A missing connection string
   stops the host at startup instead of failing on the first request.
@@ -267,6 +292,9 @@ once (`xmin` concurrency token). `AutoFlowDbContext`, as the `IUnitOfWork`,
 translates exactly these two database outcomes into the application-level
 `UniqueConstraintViolationException` and `ConcurrencyConflictException`, so
 no layer above it knows EF Core or PostgreSQL error codes.
+A deadlock or serialization failure between two simultaneous saves (e.g.
+conflicting bookings that hit an exclusion constraint at the same instant)
+is reported as a concurrency conflict too.
 `ConflictExceptionHandler` maps both to HTTP 409 with a stable `code`
 (`conflict.duplicate`, `conflict.concurrent_update`); constraint names are
 logged, never returned. Other database errors (e.g. a foreign-key violation a

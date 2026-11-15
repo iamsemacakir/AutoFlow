@@ -1,3 +1,4 @@
+using AutoFlow.Api.Auth;
 using AutoFlow.Api.Errors;
 using AutoFlow.Api.Validation;
 using AutoFlow.Application.Vehicles;
@@ -73,12 +74,16 @@ internal static class VehicleEndpoints
 
         owned.MapGet("/", ListCustomerVehicles)
             .WithName("ListCustomerVehicles")
+            .RequireAuthorization(Policies.Staff)
+            .ProducesAuthProblems()
             .WithSummary("Lists the vehicles a customer owns, oldest registration first.")
             .Produces<IReadOnlyList<VehicleDetails>>()
             .ProducesProblem(StatusCodes.Status404NotFound);
 
         owned.MapPost("/", RegisterVehicle)
             .WithName("RegisterVehicle")
+            .RequireAuthorization(Policies.FrontDesk)
+            .ProducesAuthProblems()
             .WithSummary("Registers a vehicle for a customer.")
             .Produces<VehicleDetails>(StatusCodes.Status201Created)
             .ProducesValidationProblem()
@@ -90,12 +95,16 @@ internal static class VehicleEndpoints
 
         vehicles.MapGet("/{id:guid}", GetVehicle)
             .WithName(GetVehicleRoute)
+            .RequireAuthorization(Policies.Staff)
+            .ProducesAuthProblems()
             .WithSummary("Gets a vehicle.")
             .Produces<VehicleDetails>()
             .ProducesProblem(StatusCodes.Status404NotFound);
 
         vehicles.MapPut("/{id:guid}/mileage", RecordMileage)
             .WithName("RecordMileage")
+            .RequireAuthorization(Policies.Staff)
+            .ProducesAuthProblems()
             .WithSummary("Records an odometer reading; readings never go backwards.")
             .Produces<VehicleDetails>()
             .ProducesValidationProblem()
@@ -105,6 +114,8 @@ internal static class VehicleEndpoints
 
         vehicles.MapPost("/{id:guid}/transfer", TransferVehicle)
             .WithName("TransferVehicle")
+            .RequireAuthorization(Policies.FrontDesk)
+            .ProducesAuthProblems()
             .WithSummary("Transfers a vehicle to another existing customer.")
             .Produces<VehicleDetails>()
             .ProducesValidationProblem()

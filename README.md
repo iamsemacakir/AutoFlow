@@ -50,7 +50,10 @@ Early foundation. See [ROADMAP.md](ROADMAP.md) for what is done and what comes n
 | Invoices: issue, record payment, get, list use cases | ✅ |
 | Invoices: PDF export (dependency-free renderer behind a port) | ✅ |
 | Invoices: endpoints (issue, payments, PDF download, list) | ✅ |
-| Auth, UI, deployment | ⏳ planned |
+| Auth: staff accounts, JWT sign-in, roles, account management | ✅ |
+| Auth: role policies on every endpoint, closed by default | ✅ |
+| Web UI (React + TypeScript) | ⏳ next |
+| Deployment | ⏳ planned |
 
 ## Getting started
 
@@ -92,6 +95,53 @@ Useful endpoints while running in Development:
 
 - `GET /health` — liveness check
 - `GET /openapi/v1.json` — OpenAPI document
+
+### Signing in
+
+Every request carries a bearer token from `POST /api/auth/token`. On a new
+installation the API creates the first owner from configuration while no
+account exists yet:
+
+```bash
+export Auth__InitialOwner__Email=owner@example.com
+export Auth__InitialOwner__Password='at least ten characters'
+dotnet run --project src/AutoFlow.Api
+
+TOKEN=$(curl -s localhost:5080/api/auth/token -H 'Content-Type: application/json' \
+  -d '{"email":"owner@example.com","password":"at least ten characters"}' | jq -r .accessToken)
+curl -s localhost:5080/api/auth/me -H "Authorization: Bearer $TOKEN"
+```
+
+| Method & path | Purpose | Responses |
+| --- | --- | --- |
+| `POST /api/auth/token` | Sign in (`email`, `password`); returns `accessToken`, `expiresAt` and the account | 200, 400, 401 |
+| `GET /api/auth/me` | The signed-in account | 200, 401 |
+| `POST /api/auth/me/password` | Change your own password (`currentPassword`, `newPassword`) | 204, 400, 401, 422 |
+| `GET /api/users` | Staff accounts (owners only) | 200, 401, 403 |
+| `POST /api/users` | Open an account (`email`, `displayName`, `role`, `password`) | 201 + `Location`, 400, 401, 403, 409, 422 |
+| `GET /api/users/{id}` | One account | 200, 401, 403, 404 |
+| `PUT /api/users/{id}/role` | Change the role (`Owner`, `ServiceAdvisor`, `Mechanic`) | 200, 400, 401, 403, 404, 409 |
+| `POST /api/users/{id}/deactivate` / `reactivate` | Close or reopen an account; a closed account's tokens stop working at once | 200, 401, 403, 404, 409, 422 |
+
+Who may do what:
+
+| Area | Mechanic | Service advisor | Owner |
+| --- | --- | --- | --- |
+| Read customers, vehicles, work orders, bays, appointments, the day schedule | ✅ | ✅ | ✅ |
+| Record mileage; add/remove work order lines; start and complete work | ✅ | ✅ | ✅ |
+| Register customers and vehicles, transfer vehicles | — | ✅ | ✅ |
+| Open, approve and cancel work orders; book and settle appointments | — | ✅ | ✅ |
+| Invoices and payments | — | ✅ | ✅ |
+| Bays and staff accounts | — | — | ✅ |
+
+Every API path needs a token (401 `auth.unauthenticated` without one, 403
+`auth.forbidden` without the role) except sign-in, `/health` and the
+OpenAPI document. The matrix is pinned by `AuthorizationMatrixTests`.
+
+Passwords need 10 to 128 characters. Tokens are signed with
+`Auth:SigningKey` (set `Auth__SigningKey` to a long random value outside
+development) and last `Auth:TokenLifetime` (8 hours by default). The
+workshop always keeps an active owner.
 
 ### Customers API
 
@@ -269,10 +319,11 @@ stable `code` to switch on:
 | --- | --- | --- |
 | 400 | `validation.failed` (+ `errors` per field) | body fields missing, blank, too long or out of range |
 | 400 | `request.malformed` | unreadable JSON, wrong value type, unparsable query/route value |
-| 400 | `paging.invalid_page`, `paging.invalid_page_size`, `schedule.unknown_time_zone`, `invoice.unknown_status`, `invoice.unknown_payment_method` | paging out of range, unknown time zone, status or payment method |
-| 404 | `customer.not_found`, `vehicle.not_found`, `work_order.not_found`, `work_order.line_not_found`, `bay.not_found`, `appointment.not_found`, `invoice.not_found`, `invoice.not_issued` / `route.not_found` | unknown resource / unknown URL |
+| 400 | `paging.invalid_page`, `paging.invalid_page_size`, `schedule.unknown_time_zone`, `invoice.unknown_status`, `invoice.unknown_payment_method`, `user.unknown_role`, `auth.wrong_current_password` | paging out of range, unknown time zone, status, payment method or role, wrong current password |
+| 401, 403 | `auth.invalid_credentials`, `auth.unauthenticated`, `auth.forbidden` | wrong sign-in, missing or invalid token, role not allowed |
+| 404 | `customer.not_found`, `vehicle.not_found`, `work_order.not_found`, `work_order.line_not_found`, `bay.not_found`, `appointment.not_found`, `invoice.not_found`, `invoice.not_issued`, `user.not_found` / `route.not_found` | unknown resource / unknown URL |
 | 405, 415 | `request.method_not_allowed`, `request.unsupported_media_type` | wrong method, non-JSON body |
-| 409 | `customer.has_vehicles`, `customer.has_work_orders`, `customer.has_appointments`, `vehicle.duplicate_vin`, `bay.duplicate_name`, `appointment.bay_out_of_service`, `appointment.bay_already_booked`, `appointment.vehicle_already_booked`, `conflict.duplicate`, `conflict.concurrent_update` | conflicts |
+| 409 | `customer.has_vehicles`, `customer.has_work_orders`, `customer.has_appointments`, `vehicle.duplicate_vin`, `bay.duplicate_name`, `user.duplicate_email`, `user.last_owner`, `user.cannot_deactivate_self`, `appointment.bay_out_of_service`, `appointment.bay_already_booked`, `appointment.vehicle_already_booked`, `conflict.duplicate`, `conflict.concurrent_update` | conflicts |
 | 422 | `domain.rule_violated` | business rule broken |
 | 500 | `server.error` | unexpected failure (no details leaked) |
 

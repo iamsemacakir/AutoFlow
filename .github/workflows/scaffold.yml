@@ -13,17 +13,14 @@ jobs:
       - uses: actions/setup-dotnet@v5
         with:
           global-json-file: global.json
-      - run: dotnet tool restore
       - run: dotnet build AutoFlow.slnx -c Release
-      - name: Add migration
-        run: dotnet ef migrations add AddUsers --project src/AutoFlow.Infrastructure --output-dir Persistence/Migrations
-      - name: Dump migration
+      - name: Write OpenAPI snapshot
+        run: AUTOFLOW_UPDATE_OPENAPI=1 dotnet test tests/AutoFlow.Api.Tests -c Release --no-build --filter "FullyQualifiedName~OpenApiSnapshotTests" || true
+      - name: Dump
         run: |
-          git status --short
-          tar czf - $(git status --short src/AutoFlow.Infrastructure/Persistence/Migrations | awk '{print $2}') | base64 -w0 > m.b64
+          ls -la web
+          gzip -c web/openapi.json | base64 -w0 > m.b64
           echo "BEGIN_B64"
           fold -w 4000 m.b64
           echo
           echo "END_B64"
-      - name: Test
-        run: dotnet test AutoFlow.slnx -c Release

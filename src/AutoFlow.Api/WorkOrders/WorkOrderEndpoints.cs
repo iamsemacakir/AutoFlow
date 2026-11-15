@@ -1,3 +1,4 @@
+using AutoFlow.Api.Auth;
 using AutoFlow.Api.Errors;
 using AutoFlow.Api.Validation;
 using AutoFlow.Application.Common;
@@ -87,6 +88,8 @@ internal static class WorkOrderEndpoints
 
         history.MapGet("/", ListVehicleWorkOrders)
             .WithName("ListVehicleWorkOrders")
+            .RequireAuthorization(Policies.Staff)
+            .ProducesAuthProblems()
             .WithSummary("Lists a vehicle's work orders page by page, newest first, across all owners.")
             .Produces<PagedList<WorkOrderDetails>>()
             .ProducesProblem(StatusCodes.Status400BadRequest)
@@ -94,6 +97,8 @@ internal static class WorkOrderEndpoints
 
         history.MapPost("/", OpenWorkOrder)
             .WithName("OpenWorkOrder")
+            .RequireAuthorization(Policies.FrontDesk)
+            .ProducesAuthProblems()
             .WithSummary("Opens a draft work order for the vehicle's current owner at intake.")
             .Produces<WorkOrderDetails>(StatusCodes.Status201Created)
             .ProducesValidationProblem()
@@ -105,12 +110,16 @@ internal static class WorkOrderEndpoints
 
         workOrders.MapGet("/{id:guid}", GetWorkOrder)
             .WithName(GetWorkOrderRoute)
+            .RequireAuthorization(Policies.Staff)
+            .ProducesAuthProblems()
             .WithSummary("Gets a work order with its lines and totals.")
             .Produces<WorkOrderDetails>()
             .ProducesProblem(StatusCodes.Status404NotFound);
 
         workOrders.MapPost("/{id:guid}/labour-lines", AddLabourLine)
             .WithName("AddLabourLine")
+            .RequireAuthorization(Policies.Staff)
+            .ProducesAuthProblems()
             .WithSummary("Adds labour (hours × hourly rate) to an editable work order.")
             .Produces<WorkOrderDetails>()
             .ProducesValidationProblem()
@@ -120,6 +129,8 @@ internal static class WorkOrderEndpoints
 
         workOrders.MapPost("/{id:guid}/part-lines", AddPartLine)
             .WithName("AddPartLine")
+            .RequireAuthorization(Policies.Staff)
+            .ProducesAuthProblems()
             .WithSummary("Adds a part (quantity × unit price) to an editable work order.")
             .Produces<WorkOrderDetails>()
             .ProducesValidationProblem()
@@ -129,6 +140,8 @@ internal static class WorkOrderEndpoints
 
         workOrders.MapDelete("/{id:guid}/lines/{lineId:guid}", RemoveWorkOrderLine)
             .WithName("RemoveWorkOrderLine")
+            .RequireAuthorization(Policies.Staff)
+            .ProducesAuthProblems()
             .WithSummary("Removes a line from an editable work order; the other lines keep their numbers.")
             .Produces<WorkOrderDetails>()
             .ProducesProblem(StatusCodes.Status404NotFound)
@@ -137,18 +150,26 @@ internal static class WorkOrderEndpoints
 
         MapTransition(workOrders, "/{id:guid}/approve", ApproveWorkOrder)
             .WithName("ApproveWorkOrder")
+            .RequireAuthorization(Policies.FrontDesk)
+            .ProducesAuthProblems()
             .WithSummary("The customer agrees to the estimate of a draft; its total becomes the approved total.");
 
         MapTransition(workOrders, "/{id:guid}/start", StartWorkOrder)
             .WithName("StartWorkOrder")
+            .RequireAuthorization(Policies.Staff)
+            .ProducesAuthProblems()
             .WithSummary("A mechanic starts work on an approved work order.");
 
         MapTransition(workOrders, "/{id:guid}/complete", CompleteWorkOrder)
             .WithName("CompleteWorkOrder")
+            .RequireAuthorization(Policies.Staff)
+            .ProducesAuthProblems()
             .WithSummary("Marks the work as done; from then on the lines are final.");
 
         MapTransition(workOrders, "/{id:guid}/cancel", CancelWorkOrder)
             .WithName("CancelWorkOrder")
+            .RequireAuthorization(Policies.FrontDesk)
+            .ProducesAuthProblems()
             .WithSummary("Cancels a draft or approved work order, with a reason.")
             .ProducesValidationProblem();
 

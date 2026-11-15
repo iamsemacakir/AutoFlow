@@ -17,7 +17,16 @@ public sealed class OpenApiContractTests(WebApplicationFactory<Program> factory)
     private static readonly HashSet<string> HttpMethods =
         new(["get", "put", "post", "delete", "patch", "head", "options", "trace"], StringComparer.Ordinal);
 
-    /// <summary>operationId → method, path and documented response statuses.</summary>
+    /// <summary>The one operation open to everyone; its 401 is a wrong password, not a missing token.</summary>
+    private static readonly HashSet<string> Anonymous = new(["SignIn"], StringComparer.Ordinal);
+
+    /// <summary>Operations every signed-in user may call, whatever the role: they can answer 401 but never 403.</summary>
+    private static readonly HashSet<string> AnyRole = new(["GetCurrentUser", "ChangePassword"], StringComparer.Ordinal);
+
+    /// <summary>
+    /// operationId → method, path and documented response statuses, without
+    /// the 401 and 403 every protected operation documents (checked separately).
+    /// </summary>
     public static TheoryData<string, string, string, string> Operations => new()
     {
         { "ListCustomers", "GET", "/api/customers", "200 400" },
@@ -60,14 +69,14 @@ public sealed class OpenApiContractTests(WebApplicationFactory<Program> factory)
         { "ExportInvoicePdf", "GET", "/api/invoices/{id}/pdf", "200 404" },
         { "RecordPayment", "POST", "/api/invoices/{id}/payments", "200 400 404 409 422" },
         { "SignIn", "POST", "/api/auth/token", "200 400 401" },
-        { "GetCurrentUser", "GET", "/api/auth/me", "200 401" },
-        { "ChangePassword", "POST", "/api/auth/me/password", "204 400 401 422" },
-        { "ListUsers", "GET", "/api/users", "200 401 403" },
-        { "GetUser", "GET", "/api/users/{id}", "200 401 403 404" },
-        { "CreateUser", "POST", "/api/users", "201 400 401 403 409 422" },
-        { "ChangeUserRole", "PUT", "/api/users/{id}/role", "200 400 401 403 404 409" },
-        { "DeactivateUser", "POST", "/api/users/{id}/deactivate", "200 401 403 404 409 422" },
-        { "ReactivateUser", "POST", "/api/users/{id}/reactivate", "200 401 403 404 409 422" },
+        { "GetCurrentUser", "GET", "/api/auth/me", "200" },
+        { "ChangePassword", "POST", "/api/auth/me/password", "204 400 422" },
+        { "ListUsers", "GET", "/api/users", "200" },
+        { "GetUser", "GET", "/api/users/{id}", "200 404" },
+        { "CreateUser", "POST", "/api/users", "201 400 409 422" },
+        { "ChangeUserRole", "PUT", "/api/users/{id}/role", "200 400 404 409" },
+        { "DeactivateUser", "POST", "/api/users/{id}/deactivate", "200 404 409 422" },
+        { "ReactivateUser", "POST", "/api/users/{id}/reactivate", "200 404 409 422" },
     };
 
     [Theory]
@@ -79,7 +88,31 @@ public sealed class OpenApiContractTests(WebApplicationFactory<Program> factory)
 
         Assert.True(operations.TryGetValue(operationId, out var operation), $"'{operationId}' is not documented.");
         Assert.Equal((method, path), (operation.Method, operation.Path));
-        Assert.Equal(statuses, string.Join(' ', operation.Statuses));
+        var business = Anonymous.Contains(operationId)
+            ? operation.Statuses
+            : operation.Statuses.Where(status => status is not ("401" or "403"));
+        Assert.Equal(statuses, string.Join(' ', business));
+    }
+
+    [Fact]
+    public async Task Every_operation_but_sign_in_documents_the_answers_for_a_missing_token_and_role()
+    {
+        var operations = await LoadOperationsAsync();
+
+        Assert.All(operations.Values, operation =>
+        {
+            if (Anonymous.Contains(operation.Id))
+            {
+                Assert.DoesNotContain("403", operation.Statuses);
+                return;
+            }
+
+            Assert.Contains("401", operation.Statuses);
+            if (!AnyRole.Contains(operation.Id))
+            {
+                Assert.Contains("403", operation.Statuses);
+            }
+        });
     }
 
     [Fact]

@@ -54,8 +54,10 @@ public sealed class AutoFlowDbContext(DbContextOptions<AutoFlowDbContext> option
     /// application's exceptions, so no layer above needs to know EF Core or
     /// PostgreSQL error codes. An exclusion constraint (no two overlapping
     /// bookings) is uniqueness over a time range and is reported the same way
-    /// as a unique index (ADR 0015). Other failures (e.g. a foreign-key violation,
-    /// which a use case should have prevented) stay as they are: they are bugs.
+    /// as a unique index (ADR 0015). A deadlock or serialization failure between
+    /// two simultaneous saves is a lost race too and becomes a concurrency
+    /// conflict. Other failures (e.g. a foreign-key violation, which a use case
+    /// should have prevented) stay as they are: they are bugs.
     /// </summary>
     async Task IUnitOfWork.SaveChangesAsync(CancellationToken cancellationToken)
     {
@@ -78,6 +80,19 @@ public sealed class AutoFlowDbContext(DbContextOptions<AutoFlowDbContext> option
             throw new UniqueConstraintViolationException(
                 "A record with the same unique value already exists.",
                 postgresError.ConstraintName,
+                exception);
+        }
+        catch (DbUpdateException exception) when (
+            exception.InnerException is PostgresException
+            {
+                SqlState: PostgresErrorCodes.DeadlockDetected or PostgresErrorCodes.SerializationFailure,
+            })
+        {
+            // Simultaneous inserts that conflict on an exclusion constraint wait for each
+            // other; PostgreSQL breaks the cycle by aborting one of them. That request lost
+            // the race like any other, so it is a conflict to retry, not a server error.
+            throw new ConcurrencyConflictException(
+                "The request collided with another one that was being saved at the same moment.",
                 exception);
         }
     }

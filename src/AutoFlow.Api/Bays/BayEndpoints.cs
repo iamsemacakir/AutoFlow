@@ -1,3 +1,4 @@
+using AutoFlow.Api.Auth;
 using AutoFlow.Api.Errors;
 using AutoFlow.Api.Validation;
 using AutoFlow.Application.Bays;
@@ -35,17 +36,23 @@ internal static class BayEndpoints
 
         bays.MapGet("/", ListBays)
             .WithName("ListBays")
+            .RequireAuthorization(Policies.Staff)
+            .ProducesAuthProblems()
             .WithSummary("Lists every bay, in and out of service, by name.")
             .Produces<IReadOnlyList<BayDetails>>();
 
         bays.MapGet("/{id:guid}", GetBay)
             .WithName(GetBayRoute)
+            .RequireAuthorization(Policies.Staff)
+            .ProducesAuthProblems()
             .WithSummary("Gets a bay.")
             .Produces<BayDetails>()
             .ProducesProblem(StatusCodes.Status404NotFound);
 
         bays.MapPost("/", CreateBay)
             .WithName("CreateBay")
+            .RequireAuthorization(Policies.ManageWorkshop)
+            .ProducesAuthProblems()
             .WithSummary("Adds a bay, in service, with a name no other bay has.")
             .Produces<BayDetails>(StatusCodes.Status201Created)
             .ProducesValidationProblem()
@@ -54,6 +61,8 @@ internal static class BayEndpoints
 
         bays.MapPut("/{id:guid}", RenameBay)
             .WithName("RenameBay")
+            .RequireAuthorization(Policies.ManageWorkshop)
+            .ProducesAuthProblems()
             .WithSummary("Renames a bay; the name must not be in use by another bay.")
             .Produces<BayDetails>()
             .ProducesValidationProblem()
@@ -63,10 +72,14 @@ internal static class BayEndpoints
 
         MapAction(bays, "/{id:guid}/take-out-of-service", TakeBayOutOfService)
             .WithName("TakeBayOutOfService")
+            .RequireAuthorization(Policies.ManageWorkshop)
+            .ProducesAuthProblems()
             .WithSummary("Stops new bookings for a bay; appointments already booked stay until moved.");
 
         MapAction(bays, "/{id:guid}/return-to-service", ReturnBayToService)
             .WithName("ReturnBayToService")
+            .RequireAuthorization(Policies.ManageWorkshop)
+            .ProducesAuthProblems()
             .WithSummary("Puts a bay back in service so it can be booked again.");
 
         return app;

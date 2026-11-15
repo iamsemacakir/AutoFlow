@@ -15,7 +15,7 @@ public sealed class WorkOrderLineEndpointsTests : IDisposable
     {
         ArgumentNullException.ThrowIfNull(api);
 
-        _client = api.Factory.CreateClient();
+        _client = api.CreateClient();
     }
 
     [Fact]

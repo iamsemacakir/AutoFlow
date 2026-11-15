@@ -58,10 +58,10 @@ app.UseAuthorization();
 
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    app.MapOpenApi().AllowAnonymous();
 }
 
-app.MapHealthChecks("/health");
+app.MapHealthChecks("/health").AllowAnonymous();
 
 app.MapCustomerEndpoints();
 app.MapVehicleEndpoints();
@@ -73,6 +73,7 @@ app.MapAuthEndpoints();
 app.MapUserEndpoints();
 
 app.MapGet("/", () => Results.Ok(new { name = "AutoFlow API", status = "running" }))
+    .AllowAnonymous()
     .WithName("GetApiInfo")
     .ExcludeFromDescription();
 

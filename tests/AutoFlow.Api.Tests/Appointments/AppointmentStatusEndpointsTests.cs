@@ -5,6 +5,7 @@ using AutoFlow.Application.Bays;
 using AutoFlow.Application.Common;
 using AutoFlow.Application.Vehicles;
 using AutoFlow.Application.WorkOrders;
+using AutoFlow.Domain.Users;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -23,7 +24,7 @@ public sealed class AppointmentStatusEndpointsTests : IDisposable
         ArgumentNullException.ThrowIfNull(api);
 
         _api = api;
-        _client = api.Factory.CreateClient();
+        _client = api.CreateClient();
     }
 
     [Fact]
@@ -145,6 +146,7 @@ public sealed class AppointmentStatusEndpointsTests : IDisposable
             services.AddSingleton<TimeProvider>(clock);
         }));
         using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = _api.AuthorizationFor(UserRole.Owner);
         var (appointment, _) = await BookAsync(client);
 
         using var early = await PostActionAsync(client, appointment.Id, "no-show");

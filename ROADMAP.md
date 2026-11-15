@@ -65,10 +65,10 @@ updated docs. Steps are done in order unless a dependency forces otherwise.
 - [x] PDF export: `IInvoiceDocumentRenderer` port, dependency-free PDF renderer (multi-page table, totals, payments)
 - [x] Endpoints and tests: issue, get (also by work order), list, record payment, PDF download; race tests for numbering and double invoicing, invoice workflow test
 
-## Milestone 7 — Authentication & authorization
+## Milestone 7 — Authentication & authorization ✅
 
-- [ ] Identity/JWT, roles (Owner, ServiceAdvisor, Mechanic)
-- [ ] Policy-based authorization on endpoints
+- [x] Staff accounts and JWT sign-in: roles (Owner, ServiceAdvisor, Mechanic), PBKDF2 hashes, account management for owners, initial owner and migrations on startup
+- [x] Policy-based authorization on every endpoint (Staff, FrontDesk, ManageWorkshop; signed-in by default), access matrix and role tests
 
 ## Milestone 8 — Web UI
 

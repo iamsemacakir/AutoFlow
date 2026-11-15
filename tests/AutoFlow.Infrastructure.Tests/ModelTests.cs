@@ -64,7 +64,7 @@ public class ModelTests
         using var db = CreateContext();
         var invoice = db.Model.FindEntityType(typeof(Invoice))!;
 
-        var unique = invoice.GetIndexes().Where(i => i.IsUnique).Select(i => i.GetDatabaseName()).Order().ToArray();
+        var unique = invoice.GetIndexes().Where(i => i.IsUnique).Select(i => i.GetDatabaseName()!).Order().ToArray();
 
         Assert.Equal(["ux_invoices_work_order_id", "ux_invoices_year_sequence"], unique);
         Assert.Null(invoice.FindProperty(nameof(Invoice.Number)));
