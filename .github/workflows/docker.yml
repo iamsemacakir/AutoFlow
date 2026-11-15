@@ -64,3 +64,56 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=${{ matrix.image }}
           cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+
+  e2e:
+    name: End-to-end (Docker Compose + Playwright)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Start AutoFlow with the demo workshop
+        run: docker compose up --detach --build --wait --wait-timeout 300
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install Playwright
+        working-directory: web
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Run end-to-end tests
+        working-directory: web
+        env:
+          E2E_BASE_URL: http://localhost:8080
+          E2E_SCREENSHOTS: "1"
+        run: |
+          mkdir -p e2e/screenshots
+          npx playwright test
+
+      - name: Readiness and metrics answer
+        run: |
+          curl --fail --silent http://localhost:5080/health/ready
+          curl --fail --silent http://localhost:5080/metrics > metrics.txt
+          grep -q http_server_request_duration metrics.txt
+          grep -q autoflow_payments_recorded metrics.txt
+
+      - name: Container logs
+        if: failure()
+        run: docker compose logs api web
+
+      - name: Upload report and screenshots
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: e2e
+          path: |
+            web/playwright-report
+            web/e2e/screenshots
+          if-no-files-found: ignore

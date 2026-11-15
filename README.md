@@ -110,6 +110,10 @@ npm test             # Vitest + Testing Library
 npm run build        # type check and production build into dist/
 ```
 
+End-to-end tests (Playwright) drive the real stack: start it with
+`docker compose up --build`, then run `npx playwright install chromium`
+once and `npm run e2e` in `web/`. CI does the same on every push.
+
 Sign in with an account of the API (see "Signing in" below). The client's
 API types are generated from `web/openapi.json`, a committed copy of the
 API's OpenAPI document: after changing the API's contract, run the API
