@@ -1,61 +1,59 @@
 # AutoFlow
 
 [![CI](https://github.com/iamsemacakir/AutoFlow/actions/workflows/ci.yml/badge.svg)](https://github.com/iamsemacakir/AutoFlow/actions/workflows/ci.yml)
+[![Docker](https://github.com/iamsemacakir/AutoFlow/actions/workflows/docker.yml/badge.svg)](https://github.com/iamsemacakir/AutoFlow/actions/workflows/docker.yml)
 
-AutoFlow is a management system for independent car workshops: customers,
-their vehicles, work orders, appointments and invoices — built with
-**C# / .NET 10** and **ASP.NET Core** on PostgreSQL, with a **React +
-TypeScript** web client.
+AutoFlow is a management system for independent car workshops: the day's
+schedule per bay, customers and their vehicles, work orders from estimate to
+completion, and invoices with VAT, payments and PDF export — built with
+**C# / .NET 10**, **ASP.NET Core** and **PostgreSQL**, with a **React +
+TypeScript** web client. One command starts it with a demo workshop.
 
-## Status
+![The day's schedule: one row per bay, appointments in every status](docs/screenshots/schedule.png)
 
-Early foundation. See [ROADMAP.md](ROADMAP.md) for what is done and what comes next.
-
-| Area | State |
+| Work order in progress | Invoices with an overdue one |
 | --- | --- |
-| Domain model: Customer, Vehicle (VIN, plate, mileage) | ✅ |
-| Application layer: use cases, repository contracts, result type | ✅ |
-| API host: health check, problem details, OpenAPI | ✅ |
-| Unit + integration tests, CI | ✅ |
-| Persistence: EF Core + PostgreSQL mappings, repositories | ✅ |
-| Database migrations, docker-compose for local PostgreSQL | ✅ |
-| API composition, 409 for write conflicts | ✅ |
-| Customer endpoints: CRUD, paging, search | ✅ |
-| Vehicle endpoints: register, list per customer, mileage, transfer | ✅ |
-| Request validation, consistent problem responses | ✅ |
-| API integration tests: OpenAPI contract, races, workflows | ✅ |
-| Work orders: domain aggregate, status flow, labour/part lines | ✅ |
-| Work orders: persistence (lines table, migration, concurrency) | ✅ |
-| Work orders: open use case (intake reading, current owner) | ✅ |
-| Work orders: add/remove labour and part lines use cases | ✅ |
-| Work orders: approve, start, complete, cancel use cases | ✅ |
-| Work orders: get, paged history per vehicle | ✅ |
-| Work orders: open, get, history endpoints | ✅ |
-| Work orders: add/remove line endpoints | ✅ |
-| Work orders: approve, start, complete, cancel endpoints | ✅ |
-| Appointments: bays (capacity) and 15-minute slots with overlap rule | ✅ |
-| Appointments: aggregate (book, reschedule, check in, cancel, no-show, double-booking rules) | ✅ |
-| Appointments: bay persistence (table, unique name, migration) | ✅ |
-| Appointments: appointment persistence (slot columns, exclusion constraints against double booking) | ✅ |
-| Appointments: bay use cases (create, rename, out of / back in service, get, list) | ✅ |
-| Appointments: book, reschedule, get use cases (bay in service, clash checks) | ✅ |
-| Appointments: check-in (opens the work order), cancel, no-show use cases | ✅ |
-| Appointments: day schedule use case (time-zone aware, every bay) | ✅ |
-| Appointments: bay endpoints (list, create, get, rename, out of / back in service) | ✅ |
-| Appointments: book, get, reschedule endpoints | ✅ |
-| Appointments: check-in, cancel, no-show endpoints | ✅ |
-| Appointments: day schedule endpoint, visit workflow test | ✅ |
-| Invoices: aggregate (work order snapshot, VAT, numbering, payments) | ✅ |
-| Invoices: persistence (lines and payments tables, consecutive numbers, one per work order) | ✅ |
-| Invoices: issue, record payment, get, list use cases | ✅ |
-| Invoices: PDF export (dependency-free renderer behind a port) | ✅ |
-| Invoices: endpoints (issue, payments, PDF download, list) | ✅ |
-| Auth: staff accounts, JWT sign-in, roles, account management | ✅ |
-| Auth: role policies on every endpoint, closed by default | ✅ |
-| Web UI (React + TypeScript): schedule, customers, vehicles, work orders, invoices, bays, staff | ✅ |
-| Typed API client generated from the OpenAPI document | ✅ |
-| Deployment: Docker images, Compose stack with demo workshop, image pipeline | ✅ |
-| Observability: JSON logs, health checks, OpenTelemetry metrics and traces | ✅ |
+| ![Work order with labour and parts](docs/screenshots/work-order.png) | ![Invoice list](docs/screenshots/invoices.png) |
+| **Invoice, paid at the counter** | **The invoice as PDF** |
+| ![Invoice with payments](docs/screenshots/invoice.png) | ![Invoice PDF](docs/screenshots/invoice-pdf-1.png) |
+
+## What it does
+
+- **Schedule** — bays as the workshop's capacity, appointments on a
+  15-minute grid, double booking prevented by the domain *and* by
+  PostgreSQL exclusion constraints, a time-zone-aware day view, check-in
+  that opens the work order.
+- **Customers and vehicles** — search, VIN and plate validation, odometer
+  readings that never go backwards, ownership transfer with history.
+- **Work orders** — `Draft → Approved → InProgress → Completed → Invoiced`,
+  labour and part lines with cent-exact totals, the approved estimate kept
+  to show deviations, optimistic concurrency on the whole aggregate.
+- **Invoices** — a snapshot of the finished job with VAT on the net total,
+  consecutive numbers per year without gaps, part payments, overdue
+  tracking and a PDF renderer without third-party dependencies.
+- **Staff and roles** — JWT sign-in, Owner / Service advisor / Mechanic
+  policies on every endpoint (closed by default), accounts deactivated at
+  once.
+- **Operations** — Docker images, Compose stack with an invented demo
+  workshop, JSON logs, liveness and readiness checks, OpenTelemetry metrics
+  and traces (OTLP or Prometheus).
+
+## How it is built
+
+- **Clean architecture**: Domain (no dependencies) ← Application (use
+  cases, ports) ← Infrastructure (EF Core, PostgreSQL, PDF) and API
+  (minimal APIs). Decisions are recorded in 23 [ADRs](docs/adr) and
+  [docs/architecture.md](docs/architecture.md).
+- **Tests on every level** (more than 850): domain and use-case unit tests,
+  persistence tests against real PostgreSQL (Testcontainers), API tests
+  that host the whole application, an OpenAPI contract test, race tests
+  that fire simultaneous requests, an access matrix for every endpoint,
+  web client tests with Vitest and Testing Library, and Playwright
+  end-to-end tests against the Compose stack.
+- **One contract**: the web client's types are generated from the API's
+  OpenAPI document, and CI fails if either side drifts.
+
+The [roadmap](ROADMAP.md) lists every increment in the order it was built.
 
 ## Try it
 

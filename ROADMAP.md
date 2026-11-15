@@ -75,13 +75,15 @@ updated docs. Steps are done in order unless a dependency forces otherwise.
 - [x] React + TypeScript (Vite) client: sign-in, day schedule, customers, vehicles, work orders, invoices (PDF, payments), bays, staff accounts
 - [x] Typed API client generated from OpenAPI (`web/openapi.json` pinned by an API test, types checked in CI)
 
-## Milestone 9 — Deployment
+## Milestone 9 — Deployment ✅
 
 - [x] Dockerfiles (API on the ASP.NET Core runtime image as non-root, web client on nginx), Compose for the full stack with the demo workshop
 - [x] Deployment pipeline (images built on every push, published to GHCR for `v*` tags) and environment configuration
 - [x] Observability: JSON logs, liveness/readiness checks, OpenTelemetry metrics and traces (OTLP, Prometheus) with business metrics
 
-## Done criteria for "AutoFlow finished"
+## Done criteria for "AutoFlow finished" ✅
 
-All milestones checked, CI green, a seeded demo environment runnable with one
-command, and README screenshots of the UI.
+- [x] All milestones checked
+- [x] CI green: .NET build and tests, web client checks, Docker images, end-to-end tests
+- [x] A seeded demo environment runnable with one command (`docker compose up --build`)
+- [x] README screenshots of the UI (taken by the end-to-end tests against the demo stack)
