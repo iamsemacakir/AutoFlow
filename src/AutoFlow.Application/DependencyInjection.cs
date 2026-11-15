@@ -62,6 +62,7 @@ public static class DependencyInjection
         services.AddScoped<GetInvoiceHandler>();
         services.AddScoped<GetWorkOrderInvoiceHandler>();
         services.AddScoped<ListInvoicesHandler>();
+        services.AddScoped<ExportInvoiceHandler>();
 
         return services;
     }

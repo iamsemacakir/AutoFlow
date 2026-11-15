@@ -23,6 +23,7 @@ public class DependencyInjectionTests
             .AddSingleton<IBayRepository>(store)
             .AddSingleton<IAppointmentRepository>(store)
             .AddSingleton<IInvoiceRepository>(store)
+            .AddSingleton<IInvoiceDocumentRenderer>(new StubInvoiceRenderer())
             .AddSingleton<IUnitOfWork>(store)
             .AddApplication();
 
@@ -71,6 +72,7 @@ public class DependencyInjectionTests
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<GetInvoiceHandler>());
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<GetWorkOrderInvoiceHandler>());
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<ListInvoicesHandler>());
+        Assert.NotNull(scope.ServiceProvider.GetRequiredService<ExportInvoiceHandler>());
         Assert.Same(TimeProvider.System, provider.GetRequiredService<TimeProvider>());
     }
 

@@ -172,6 +172,10 @@ See [ADR 0003](adr/0003-ef-core-postgresql-persistence.md).
   of the year plus one, and the index rejects a number taken twice, so
   numbers have no gaps. A second unique index allows one invoice per work
   order. See [ADR 0019](adr/0019-invoice-persistence-and-numbering.md).
+- `PdfInvoiceRenderer` implements the application's
+  `IInvoiceDocumentRenderer` port by writing PDF directly (standard fonts,
+  no library, no native dependency); `ExportInvoiceHandler` uses it. See
+  [ADR 0020](adr/0020-invoice-pdf-export.md).
 - Read-only queries (searches, lists) use `AsNoTracking`; owned children
   come with their root (`ListByVehicleAsync` returns work orders with lines). Customer search
   filters with parameterized SQL (`FromSqlRaw`) because the value-converted

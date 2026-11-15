@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Text;
 using AutoFlow.Application.Common;
 using AutoFlow.Application.Invoices;
 using AutoFlow.Application.Tests.Fakes;
@@ -259,5 +261,47 @@ public class InvoiceHandlerTests
 
         Assert.Equal(("invoice.unknown_status", ErrorKind.Validation), (unknownStatus.Error.Code, unknownStatus.Error.Kind));
         Assert.Equal("paging.invalid_page", badPage.Error.Code);
+    }
+
+    [Fact]
+    public async Task Export_renders_the_invoice_as_it_stands_now_with_the_workshops_settings()
+    {
+        var invoice = SeedInvoice(sequence: 42);
+        invoice.RecordPayment(100m, PaymentMethod.Cash, Now);
+        var settings = new InvoicingSettings { SellerName = "Garage Becker" };
+        var handler = new ExportInvoiceHandler(_store, new StubInvoiceRenderer(), settings, new FixedTimeProvider(Now.AddDays(30)));
+
+        var result = await handler.HandleAsync(new ExportInvoiceQuery(invoice.Id));
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(("2026-00042.txt", "text/plain"), (result.Value.FileName, result.Value.ContentType));
+        Assert.Equal(
+            string.Create(CultureInfo.InvariantCulture, $"Garage Becker|2026-00042|PartiallyPaid|{185.01m}|overdue=True"),
+            Encoding.UTF8.GetString(result.Value.Content.Span));
+        Assert.Equal(0, _store.SaveCount);
+    }
+
+    [Fact]
+    public async Task Export_of_an_unknown_invoice_returns_not_found()
+    {
+        var handler = new ExportInvoiceHandler(_store, new StubInvoiceRenderer(), InvoicingSettings.Default, new FixedTimeProvider());
+
+        var result = await handler.HandleAsync(new ExportInvoiceQuery(Guid.NewGuid()));
+
+        Assert.Equal("invoice.not_found", result.Error.Code);
+    }
+
+    [Theory]
+    [InlineData(-1, 14)]
+    [InlineData(100.5, 14)]
+    [InlineData(19.999, 14)]
+    [InlineData(19, -1)]
+    [InlineData(19, 366)]
+    public void Settings_out_of_range_are_rejected_before_the_first_invoice(double vatRatePercent, int paymentTermDays)
+    {
+        var settings = new InvoicingSettings { VatRatePercent = (decimal)vatRatePercent, PaymentTermDays = paymentTermDays };
+
+        Assert.Throws<InvalidOperationException>(() => settings.Validated());
+        Assert.Same(InvoicingSettings.Default, InvoicingSettings.Default.Validated());
     }
 }
