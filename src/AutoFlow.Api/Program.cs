@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using AutoFlow.Api.Appointments;
 using AutoFlow.Api.Auth;
 using AutoFlow.Api.Bays;
@@ -35,6 +36,10 @@ builder.Services.AddAutoFlowAuthentication(builder.Configuration);
 builder.Services.AddAuthorizationBuilder().AddAutoFlowPolicies();
 builder.Services.AddHostedService<DatabaseInitializer>();
 
+// Numbers are numbers: no "42" strings in requests, and the OpenAPI document
+// (and the client generated from it) says `number`, not `number | string`.
+builder.Services.ConfigureHttpJsonOptions(options =>
+    options.SerializerOptions.NumberHandling = JsonNumberHandling.Strict);
 builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails(options => options.CustomizeProblemDetails = ProblemDetailsConventions.Apply);
 builder.Services.AddExceptionHandler<BadRequestExceptionHandler>();

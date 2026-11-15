@@ -264,6 +264,12 @@ authentication. Business rules do not live here.
   `/api/auth/token`, `/health` and the OpenAPI document are the only
   anonymous paths. `DatabaseInitializer` applies migrations
   and creates the initial owner on start when configured to.
+- JSON numbers are strict (`JsonNumberHandling.Strict`): amounts and
+  mileages are JSON numbers both ways, and the OpenAPI document says so.
+  `web/openapi.json` is a committed copy of that document, from which the
+  web client's types are generated; `OpenApiSnapshotTests` fails when the
+  API's contract changes without the copy (`AUTOFLOW_UPDATE_OPENAPI=1`
+  rewrites it).
 - `Program.cs` is the composition root: `AddApplication()` plus
   `AddInfrastructure(ConnectionStrings:AutoFlow)`. A missing connection string
   stops the host at startup instead of failing on the first request.
