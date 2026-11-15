@@ -272,6 +272,11 @@ authentication. Business rules do not live here.
   web client's types are generated; `OpenApiSnapshotTests` fails when the
   API's contract changes without the copy (`AUTOFLOW_UPDATE_OPENAPI=1`
   rewrites it).
+- Observability (`Observability/`): `/health/live`, `/health/ready` (with
+  a database check) and `/health`; OpenTelemetry metrics and traces with an
+  `AutoFlow` business meter (`AutoFlowMetrics`), exported over OTLP or to a
+  Prometheus endpoint when configured; JSON console logs outside
+  development. See [ADR 0023](adr/0023-containers-and-observability.md).
 - `Program.cs` is the composition root: `AddApplication()` plus
   `AddInfrastructure(ConnectionStrings:AutoFlow)`. A missing connection string
   stops the host at startup instead of failing on the first request.

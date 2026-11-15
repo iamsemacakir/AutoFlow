@@ -79,7 +79,7 @@ updated docs. Steps are done in order unless a dependency forces otherwise.
 
 - [ ] Dockerfiles, compose for full stack
 - [ ] Deployment pipeline and environment configuration
-- [ ] Observability (structured logging, health checks, metrics)
+- [x] Observability: JSON logs, liveness/readiness checks, OpenTelemetry metrics and traces (OTLP, Prometheus) with business metrics
 
 ## Done criteria for "AutoFlow finished"
 

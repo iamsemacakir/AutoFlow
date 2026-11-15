@@ -1,5 +1,6 @@
 using AutoFlow.Api.Auth;
 using AutoFlow.Api.Errors;
+using AutoFlow.Api.Observability;
 using AutoFlow.Api.Validation;
 using AutoFlow.Application.Common;
 using AutoFlow.Application.WorkOrders;
@@ -194,6 +195,7 @@ internal static class WorkOrderEndpoints
         Guid vehicleId,
         OpenWorkOrderRequest request,
         OpenWorkOrderHandler handler,
+        AutoFlowMetrics metrics,
         CancellationToken cancellationToken)
     {
         var result = await handler.HandleAsync(
@@ -201,7 +203,11 @@ internal static class WorkOrderEndpoints
             cancellationToken);
 
         return result.Match(
-            workOrder => Results.CreatedAtRoute(GetWorkOrderRoute, new { id = workOrder.Id }, workOrder),
+            workOrder =>
+            {
+                metrics.WorkOrderOpened("intake");
+                return Results.CreatedAtRoute(GetWorkOrderRoute, new { id = workOrder.Id }, workOrder);
+            },
             error => error.ToProblem());
     }
 

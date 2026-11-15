@@ -1,8 +1,10 @@
 using AutoFlow.Api.Auth;
 using AutoFlow.Api.Errors;
+using AutoFlow.Api.Observability;
 using AutoFlow.Api.Validation;
 using AutoFlow.Application.Common;
 using AutoFlow.Application.Invoices;
+using AutoFlow.Domain.Invoices;
 
 namespace AutoFlow.Api.Invoices;
 
@@ -107,12 +109,17 @@ internal static class InvoiceEndpoints
     private static async Task<IResult> IssueInvoice(
         Guid workOrderId,
         IssueInvoiceHandler handler,
+        AutoFlowMetrics metrics,
         CancellationToken cancellationToken)
     {
         var result = await handler.HandleAsync(new IssueInvoiceCommand(workOrderId), cancellationToken);
 
         return result.Match(
-            invoice => Results.CreatedAtRoute(GetInvoiceRoute, new { id = invoice.Id }, invoice),
+            invoice =>
+            {
+                metrics.InvoiceIssued(invoice.GrossTotal);
+                return Results.CreatedAtRoute(GetInvoiceRoute, new { id = invoice.Id }, invoice);
+            },
             error => error.ToProblem());
     }
 
@@ -164,12 +171,20 @@ internal static class InvoiceEndpoints
         Guid id,
         RecordPaymentRequest request,
         RecordPaymentHandler handler,
+        AutoFlowMetrics metrics,
         CancellationToken cancellationToken)
     {
         var result = await handler.HandleAsync(
             new RecordPaymentCommand(id, request.Amount!.Value, request.Method!, request.ReceivedAt),
             cancellationToken);
 
-        return result.Match(value => Results.Ok(value), error => error.ToProblem());
+        return result.Match(
+            value =>
+            {
+                metrics.PaymentRecorded(
+                    Enum.TryParse<PaymentMethod>(request.Method, ignoreCase: true, out var method) ? method.ToString() : "Other");
+                return Results.Ok(value);
+            },
+            error => error.ToProblem());
     }
 }
