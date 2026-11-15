@@ -4,8 +4,8 @@
 
 AutoFlow is a management system for independent car workshops: customers,
 their vehicles, work orders, appointments and invoices — built with
-**C# / .NET 10** and **ASP.NET Core**, with PostgreSQL and a React + TypeScript
-front end planned.
+**C# / .NET 10** and **ASP.NET Core** on PostgreSQL, with a **React +
+TypeScript** web client.
 
 ## Status
 
@@ -52,8 +52,26 @@ Early foundation. See [ROADMAP.md](ROADMAP.md) for what is done and what comes n
 | Invoices: endpoints (issue, payments, PDF download, list) | ✅ |
 | Auth: staff accounts, JWT sign-in, roles, account management | ✅ |
 | Auth: role policies on every endpoint, closed by default | ✅ |
-| Web UI (React + TypeScript) | ⏳ next |
-| Deployment | ⏳ planned |
+| Web UI (React + TypeScript): schedule, customers, vehicles, work orders, invoices, bays, staff | ✅ |
+| Typed API client generated from the OpenAPI document | ✅ |
+| Deployment: Docker images, Compose stack with demo workshop, image pipeline | ✅ |
+| Observability: JSON logs, health checks, OpenTelemetry metrics and traces | ✅ |
+
+## Try it
+
+With Docker, one command starts the database, the API and the web client
+with an invented demo workshop:
+
+```bash
+docker compose up --build
+```
+
+Open <http://localhost:8080> and sign in as `owner@autoflow.demo`,
+`advisor@autoflow.demo` or `mechanic@autoflow.demo` — the password is
+`autoflow-demo` for all three. The API itself is on <http://localhost:5080>
+(`/health/ready`, `/metrics`). These are demo credentials: set
+`AUTOFLOW_SIGNING_KEY` and `AUTOFLOW_OWNER_PASSWORD` before using the stack
+for anything else.
 
 ## Getting started
 
@@ -67,14 +85,49 @@ dotnet test
 dotnet run --project src/AutoFlow.Api   # http://localhost:5080
 ```
 
+### Demo workshop
+
+Set `Seed__DemoData=true` (the Docker Compose setup below does) and the API
+fills an empty database on start with an invented workshop: four bays (one
+out of service), eight customers with their cars, today's and tomorrow's
+appointments in every status, work orders from estimate to invoiced, and
+paid, part-paid and overdue invoices. The day is planned around the moment
+of start in `Seed__TimeZone` (default `Europe/Berlin`). Besides the initial
+owner it opens `advisor@autoflow.demo` and `mechanic@autoflow.demo` with the
+password `Seed__StaffPassword` (default `autoflow-demo`). Once a customer
+exists nothing is seeded, so a real installation is never touched.
+
+### Web client
+
+The React + TypeScript client lives in `web/` (Node.js 22). With the API
+running on `localhost:5080`:
+
+```bash
+cd web
+npm ci
+npm run dev          # http://localhost:5173, forwards /api to the API
+npm test             # Vitest + Testing Library
+npm run build        # type check and production build into dist/
+```
+
+End-to-end tests (Playwright) drive the real stack: start it with
+`docker compose up --build`, then run `npx playwright install chromium`
+once and `npm run e2e` in `web/`. CI does the same on every push.
+
+Sign in with an account of the API (see "Signing in" below). The client's
+API types are generated from `web/openapi.json`, a committed copy of the
+API's OpenAPI document: after changing the API's contract, run the API
+tests once with `AUTOFLOW_UPDATE_OPENAPI=1` to refresh the copy, then
+`npm run generate:api`. CI fails if either step was forgotten.
+
 ### Local database
 
-`docker-compose.yml` starts PostgreSQL 17 on `localhost:5432`
+`docker compose up -d db` starts PostgreSQL 17 on `localhost:5432`
 (database, user and password `autoflow`). The schema is managed by EF Core
 migrations; the `dotnet ef` tool is pinned in `.config/dotnet-tools.json`.
 
 ```bash
-docker compose up -d               # start PostgreSQL
+docker compose up -d db            # start only PostgreSQL
 dotnet tool restore                # installs dotnet-ef
 dotnet ef database update --project src/AutoFlow.Infrastructure
 ```
@@ -347,14 +400,15 @@ src/
   AutoFlow.Domain/        entities, value objects, business rules (no dependencies)
   AutoFlow.Application/   use cases, repository contracts, Result/Error
   AutoFlow.Infrastructure/ EF Core + PostgreSQL: DbContext, mappings, repositories
-  AutoFlow.Api/           ASP.NET Core host, HTTP endpoints, error handling
+  AutoFlow.Api/           ASP.NET Core host, HTTP endpoints, authentication, error handling
+web/                      React + TypeScript client (Vite), API types generated from openapi.json
 tests/
   AutoFlow.Domain.Tests/        unit tests for domain rules
   AutoFlow.Application.Tests/   use-case tests against in-memory fakes
   AutoFlow.Infrastructure.Tests/ persistence tests against PostgreSQL (Testcontainers)
   AutoFlow.Api.Tests/      HTTP tests of the full stack (WebApplicationFactory + PostgreSQL):
                            endpoints, OpenAPI contract, simultaneous requests, workflows
-docker-compose.yml   local PostgreSQL for development
+docker-compose.yml   PostgreSQL for development, or the whole stack with the demo workshop
 docs/
   architecture.md    layers, dependency rules, conventions
   adr/               architecture decision records

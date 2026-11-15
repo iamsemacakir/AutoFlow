@@ -100,6 +100,7 @@ public sealed class RoleAccessTests : IDisposable
 
     [Theory]
     [InlineData("/health")]
+    [InlineData("/health/live")]
     [InlineData("/")]
     public async Task Health_check_and_api_info_stay_public(string path)
     {

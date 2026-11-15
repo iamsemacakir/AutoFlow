@@ -226,7 +226,7 @@ internal sealed class PdfInvoiceRenderer(TimeProvider timeProvider) : IInvoiceDo
         }
     }
 
-    private static IEnumerable<string> Lines(string text) =>
+    private static string[] Lines(string text) =>
         text.Split(['\n', '\r'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
     private static string Money(decimal amount) => amount.ToString("#,##0.00", CultureInfo.InvariantCulture);

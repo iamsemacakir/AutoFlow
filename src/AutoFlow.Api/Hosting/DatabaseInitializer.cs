@@ -8,10 +8,11 @@ namespace AutoFlow.Api.Hosting;
 /// <summary>
 /// Prepares the database when the API starts, if configured to: applies
 /// pending migrations (<c>Database:MigrateOnStartup</c>, used by the
-/// container setup) and creates the first owner from <c>Auth:InitialOwner</c>
-/// while no account exists. With neither configured it does not touch the
-/// database, so the API can start without one (e.g. to serve its OpenAPI
-/// document).
+/// container setup), creates the first owner from <c>Auth:InitialOwner</c>
+/// while no account exists, and fills an empty database with the demo
+/// workshop (<c>Seed:DemoData</c>). With none of them configured it does not
+/// touch the database, so the API can start without one (e.g. to serve its
+/// OpenAPI document).
 /// </summary>
 internal sealed partial class DatabaseInitializer(
     IServiceProvider services,
@@ -25,7 +26,8 @@ internal sealed partial class DatabaseInitializer(
     {
         var migrate = configuration.GetValue<bool>(MigrateOnStartupKey);
         var owner = auth.InitialOwner is { Email.Length: > 0 } configured ? configured : null;
-        if (!migrate && owner is null)
+        var demo = configuration.GetSection(DemoDataOptions.SectionName).Get<DemoDataOptions>() ?? new DemoDataOptions();
+        if (!migrate && owner is null && !demo.DemoData)
         {
             return;
         }
@@ -50,6 +52,12 @@ internal sealed partial class DatabaseInitializer(
                 LogOwnerCreated(logger, owner.Email);
             }
         }
+
+        if (demo.DemoData && await ActivatorUtilities.CreateInstance<DemoDataSeeder>(scope.ServiceProvider)
+                .SeedAsync(demo, cancellationToken))
+        {
+            LogDemoDataSeeded(logger, demo.TimeZone);
+        }
     }
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
@@ -59,4 +67,7 @@ internal sealed partial class DatabaseInitializer(
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Created the initial owner account {Email}")]
     private static partial void LogOwnerCreated(ILogger logger, string email);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Seeded the demo workshop, planned in {TimeZone}")]
+    private static partial void LogDemoDataSeeded(ILogger logger, string timeZone);
 }

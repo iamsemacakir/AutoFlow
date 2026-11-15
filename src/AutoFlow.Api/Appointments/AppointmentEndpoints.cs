@@ -1,5 +1,6 @@
 using AutoFlow.Api.Auth;
 using AutoFlow.Api.Errors;
+using AutoFlow.Api.Observability;
 using AutoFlow.Api.Validation;
 using AutoFlow.Application.Appointments;
 using AutoFlow.Domain.Appointments;
@@ -193,6 +194,7 @@ internal static class AppointmentEndpoints
         Guid vehicleId,
         BookAppointmentRequest request,
         BookAppointmentHandler handler,
+        AutoFlowMetrics metrics,
         CancellationToken cancellationToken)
     {
         var result = await handler.HandleAsync(
@@ -205,7 +207,11 @@ internal static class AppointmentEndpoints
             cancellationToken);
 
         return result.Match(
-            appointment => Results.CreatedAtRoute(GetAppointmentRoute, new { id = appointment.Id }, appointment),
+            appointment =>
+            {
+                metrics.AppointmentBooked();
+                return Results.CreatedAtRoute(GetAppointmentRoute, new { id = appointment.Id }, appointment);
+            },
             error => error.ToProblem());
     }
 
@@ -236,13 +242,20 @@ internal static class AppointmentEndpoints
         Guid id,
         CheckInAppointmentRequest? request,
         CheckInAppointmentHandler handler,
+        AutoFlowMetrics metrics,
         CancellationToken cancellationToken)
     {
         var result = await handler.HandleAsync(
             new CheckInAppointmentCommand(id, request?.MileageKm, request?.Complaint),
             cancellationToken);
 
-        return result.Match(value => Results.Ok(value), error => error.ToProblem());
+        return result.Match(
+            value =>
+            {
+                metrics.WorkOrderOpened("check-in");
+                return Results.Ok(value);
+            },
+            error => error.ToProblem());
     }
 
     private static async Task<IResult> CancelAppointment(

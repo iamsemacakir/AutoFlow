@@ -1,0 +1,119 @@
+name: Docker
+
+on:
+  push:
+    branches: [main, 'daily/**']
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: docker-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  images:
+    name: Build ${{ matrix.image }} image
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      matrix:
+        include:
+          - image: api
+            context: .
+            file: src/AutoFlow.Api/Dockerfile
+          - image: web
+            context: web
+            file: web/Dockerfile
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: docker/setup-buildx-action@v3
+
+      # Images are published for version tags only; every other push just proves they build.
+      - name: Log in to the GitHub Container Registry
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Image tags
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/autoflow-${{ matrix.image }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+
+      - name: Build
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.file }}
+          push: ${{ startsWith(github.ref, 'refs/tags/v') }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+
+  e2e:
+    name: End-to-end (Docker Compose + Playwright)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Start AutoFlow with the demo workshop
+        run: docker compose up --detach --build --wait --wait-timeout 300
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install Playwright
+        working-directory: web
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Run end-to-end tests
+        working-directory: web
+        env:
+          E2E_BASE_URL: http://localhost:8080
+          E2E_SCREENSHOTS: "1"
+        run: |
+          mkdir -p e2e/screenshots
+          npx playwright test
+
+      - name: Readiness and metrics answer
+        run: |
+          curl --fail --silent http://localhost:5080/health/ready
+          curl --fail --silent http://localhost:5080/metrics > metrics.txt
+          grep -q http_server_request_duration metrics.txt
+          grep -q autoflow_payments_recorded metrics.txt
+
+      - name: Container logs
+        if: failure()
+        run: docker compose logs api web
+
+      - name: Upload report and screenshots
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: e2e
+          path: |
+            web/playwright-report
+            web/e2e/screenshots
+          if-no-files-found: ignore

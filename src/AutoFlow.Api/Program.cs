@@ -6,6 +6,7 @@ using AutoFlow.Api.Customers;
 using AutoFlow.Api.Errors;
 using AutoFlow.Api.Hosting;
 using AutoFlow.Api.Invoices;
+using AutoFlow.Api.Observability;
 using AutoFlow.Api.Users;
 using AutoFlow.Api.Vehicles;
 using AutoFlow.Api.WorkOrders;
@@ -45,7 +46,7 @@ builder.Services.AddProblemDetails(options => options.CustomizeProblemDetails = 
 builder.Services.AddExceptionHandler<BadRequestExceptionHandler>();
 builder.Services.AddExceptionHandler<DomainExceptionHandler>();
 builder.Services.AddExceptionHandler<ConflictExceptionHandler>();
-builder.Services.AddHealthChecks();
+builder.Services.AddAutoFlowObservability(builder.Configuration);
 
 // Unbindable requests (malformed JSON, wrong content type) throw in every
 // environment, so BadRequestExceptionHandler answers them the same way everywhere.
@@ -66,7 +67,7 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi().AllowAnonymous();
 }
 
-app.MapHealthChecks("/health").AllowAnonymous();
+app.MapAutoFlowObservability();
 
 app.MapCustomerEndpoints();
 app.MapVehicleEndpoints();

@@ -263,11 +263,30 @@ authentication. Business rules do not live here.
   `AuthorizationMatrixTests` pins the policy of every named endpoint.
   `/api/auth/token`, `/health` and the OpenAPI document are the only
   anonymous paths. `DatabaseInitializer` applies migrations
-  and creates the initial owner on start when configured to.
+  and creates the initial owner on start when configured to, and
+  `DemoDataSeeder` fills an empty database with an invented demo workshop
+  (`Seed:DemoData`).
+- JSON numbers are strict (`JsonNumberHandling.Strict`): amounts and
+  mileages are JSON numbers both ways, and the OpenAPI document says so.
+  `web/openapi.json` is a committed copy of that document, from which the
+  web client's types are generated; `OpenApiSnapshotTests` fails when the
+  API's contract changes without the copy (`AUTOFLOW_UPDATE_OPENAPI=1`
+  rewrites it).
+- Observability (`Observability/`): `/health/live`, `/health/ready` (with
+  a database check) and `/health`; OpenTelemetry metrics and traces with an
+  `AutoFlow` business meter (`AutoFlowMetrics`), exported over OTLP or to a
+  Prometheus endpoint when configured; JSON console logs outside
+  development. See [ADR 0023](adr/0023-containers-and-observability.md).
 - `Program.cs` is the composition root: `AddApplication()` plus
   `AddInfrastructure(ConnectionStrings:AutoFlow)`. A missing connection string
   stops the host at startup instead of failing on the first request.
   `appsettings.Development.json` points at the docker-compose database.
+
+**Web client** (`web/`) — React + TypeScript, built with Vite. Screens in
+`src/pages`, server state in TanStack Query, and every API call goes
+through `openapi-fetch` typed by `src/api/schema.d.ts`, generated from
+`web/openapi.json`. The token is attached by a client middleware; a 401
+signs the user out. See [ADR 0022](adr/0022-web-client.md).
 
 ## Error handling
 

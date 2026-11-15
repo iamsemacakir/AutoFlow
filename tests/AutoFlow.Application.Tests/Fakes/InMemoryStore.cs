@@ -241,14 +241,14 @@ public sealed class InMemoryStore
 
     /// <summary>Same filter and ordering as the PostgreSQL repository.</summary>
     public Task<IReadOnlyList<Appointment>> ListOverlappingAsync(
-        DateTimeOffset from,
-        DateTimeOffset to,
+        DateTimeOffset periodStart,
+        DateTimeOffset periodEnd,
         CancellationToken cancellationToken = default) =>
         Task.FromResult<IReadOnlyList<Appointment>>(
         [
             .. _appointments.Values
                 .Where(a => a.Status != AppointmentStatus.Cancelled)
-                .Where(a => a.Slot.Start < to && from < a.Slot.End)
+                .Where(a => a.Slot.Start < periodEnd && periodStart < a.Slot.End)
                 .OrderBy(a => a.Slot.Start)
                 .ThenBy(a => a.Id),
         ]);

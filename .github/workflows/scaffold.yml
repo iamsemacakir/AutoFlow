@@ -7,20 +7,36 @@ permissions:
 jobs:
   scaffold:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/setup-dotnet@v5
+      - run: docker compose up --detach --build --wait --wait-timeout 300
+      - uses: actions/setup-node@v4
         with:
-          global-json-file: global.json
-      - run: dotnet build AutoFlow.slnx -c Release
-      - name: Write OpenAPI snapshot
-        run: AUTOFLOW_UPDATE_OPENAPI=1 dotnet test tests/AutoFlow.Api.Tests -c Release --no-build --filter "FullyQualifiedName~OpenApiSnapshotTests" || true
+          node-version: 22
+      - name: Screenshots
+        working-directory: web
+        env:
+          E2E_BASE_URL: http://localhost:8080
+          E2E_SCREENSHOTS: "1"
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+          mkdir -p e2e/screenshots
+          npx playwright test --retries 0
+      - name: Invoice PDF
+        run: |
+          sudo apt-get install -y -qq poppler-utils > /dev/null
+          TOKEN=$(curl -s localhost:5080/api/auth/token -H 'Content-Type: application/json' -d '{"email":"owner@autoflow.demo","password":"autoflow-demo"}' | python3 -c 'import json,sys; print(json.load(sys.stdin)["accessToken"])')
+          ID=$(curl -s "localhost:5080/api/invoices?status=PartiallyPaid" -H "Authorization: Bearer $TOKEN" | python3 -c 'import json,sys; print(json.load(sys.stdin)["items"][0]["id"])')
+          curl -s -o invoice.pdf "localhost:5080/api/invoices/$ID/pdf" -H "Authorization: Bearer $TOKEN"
+          pdftoppm -r 90 -png -f 1 -l 1 invoice.pdf web/e2e/screenshots/invoice-pdf
       - name: Dump
         run: |
-          ls -la web
-          gzip -c web/openapi.json | base64 -w0 > m.b64
+          cd web/e2e/screenshots && ls -la
+          tar czf /tmp/s.tgz *.png
+          base64 -w0 /tmp/s.tgz > /tmp/s.b64
           echo "BEGIN_B64"
-          fold -w 4000 m.b64
+          fold -w 4000 /tmp/s.b64
           echo
           echo "END_B64"

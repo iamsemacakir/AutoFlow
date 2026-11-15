@@ -70,16 +70,16 @@ updated docs. Steps are done in order unless a dependency forces otherwise.
 - [x] Staff accounts and JWT sign-in: roles (Owner, ServiceAdvisor, Mechanic), PBKDF2 hashes, account management for owners, initial owner and migrations on startup
 - [x] Policy-based authorization on every endpoint (Staff, FrontDesk, ManageWorkshop; signed-in by default), access matrix and role tests
 
-## Milestone 8 — Web UI
+## Milestone 8 — Web UI ✅
 
-- [ ] React + TypeScript (Vite) client: customers, vehicles, work orders, calendar, invoices
-- [ ] Typed API client generated from OpenAPI
+- [x] React + TypeScript (Vite) client: sign-in, day schedule, customers, vehicles, work orders, invoices (PDF, payments), bays, staff accounts
+- [x] Typed API client generated from OpenAPI (`web/openapi.json` pinned by an API test, types checked in CI)
 
 ## Milestone 9 — Deployment
 
-- [ ] Dockerfiles, compose for full stack
-- [ ] Deployment pipeline and environment configuration
-- [ ] Observability (structured logging, health checks, metrics)
+- [x] Dockerfiles (API on the ASP.NET Core runtime image as non-root, web client on nginx), Compose for the full stack with the demo workshop
+- [x] Deployment pipeline (images built on every push, published to GHCR for `v*` tags) and environment configuration
+- [x] Observability: JSON logs, liveness/readiness checks, OpenTelemetry metrics and traces (OTLP, Prometheus) with business metrics
 
 ## Done criteria for "AutoFlow finished"
 
