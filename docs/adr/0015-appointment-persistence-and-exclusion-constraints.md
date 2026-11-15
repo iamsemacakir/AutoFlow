@@ -70,3 +70,10 @@ constraints, while ADR 0004 says migrations are generated, not written.
 - The exclusion constraints' GiST indexes lead with `bay_id` and
   `vehicle_id`; the plain B-tree foreign-key indexes stay for EF Core's
   conventions and simple lookups.
+- Addendum (2026-11-15): inserts that conflict on an exclusion constraint
+  at the same instant wait for each other, and PostgreSQL breaks such a
+  cycle with `deadlock_detected` (40P01) for one of them. The unit of work
+  reports that — and `serialization_failure` (40001) — as a
+  `ConcurrencyConflictException` (409 `conflict.concurrent_update`) instead
+  of letting it surface as a 500; the simultaneous-booking test accepts it
+  as a third way to lose the race.

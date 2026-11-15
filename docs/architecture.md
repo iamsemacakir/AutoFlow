@@ -288,6 +288,9 @@ once (`xmin` concurrency token). `AutoFlowDbContext`, as the `IUnitOfWork`,
 translates exactly these two database outcomes into the application-level
 `UniqueConstraintViolationException` and `ConcurrencyConflictException`, so
 no layer above it knows EF Core or PostgreSQL error codes.
+A deadlock or serialization failure between two simultaneous saves (e.g.
+conflicting bookings that hit an exclusion constraint at the same instant)
+is reported as a concurrency conflict too.
 `ConflictExceptionHandler` maps both to HTTP 409 with a stable `code`
 (`conflict.duplicate`, `conflict.concurrent_update`); constraint names are
 logged, never returned. Other database errors (e.g. a foreign-key violation a

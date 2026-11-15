@@ -23,8 +23,11 @@ public sealed class ConcurrentRequestTests : IDisposable
     // unique index after passing that check at the same moment.
     private static readonly string[] DuplicateVinCodes = ["vehicle.duplicate_vin", "conflict.duplicate"];
 
-    // Same for bookings: the clash pre-check, or the bay exclusion constraint.
-    private static readonly string[] BayClashCodes = ["appointment.bay_already_booked", "conflict.duplicate"];
+    // Same for bookings: the clash pre-check, or the bay exclusion constraint — and
+    // inserts that hit the constraint at the same instant can deadlock, which PostgreSQL
+    // resolves by aborting one of them (a concurrent update, ADR 0005).
+    private static readonly string[] BayClashCodes =
+        ["appointment.bay_already_booked", "conflict.duplicate", "conflict.concurrent_update"];
 
     // A second invoice for one work order: refused by the domain once the first
     // is committed, or by the work order's version / unique index during the race.
