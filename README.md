@@ -49,7 +49,7 @@ Early foundation. See [ROADMAP.md](ROADMAP.md) for what is done and what comes n
 | Invoices: persistence (lines and payments tables, consecutive numbers, one per work order) | ✅ |
 | Invoices: issue, record payment, get, list use cases | ✅ |
 | Invoices: PDF export (dependency-free renderer behind a port) | ✅ |
-| Invoices: endpoints | ⏳ next |
+| Invoices: endpoints (issue, payments, PDF download, list) | ✅ |
 | Auth, UI, deployment | ⏳ planned |
 
 ## Getting started
@@ -226,6 +226,36 @@ curl -s 'localhost:5080/api/schedule?date=2026-11-20&timeZone=Europe/Berlin'
 curl -s localhost:5080/api/appointments/<appointment-id>/check-in -H 'Content-Type: application/json' -d '{"mileageKm":61480}'
 ```
 
+### Invoices API
+
+| Method & path | Purpose | Responses |
+| --- | --- | --- |
+| `POST /api/work-orders/{workOrderId}/invoice` | Bill a completed work order: next number of the year, configured VAT rate and payment term; the work order becomes `Invoiced` | 201 + `Location`, 404, 409, 422 |
+| `GET /api/work-orders/{workOrderId}/invoice` | The invoice of a work order (`invoice.not_issued` if there is none yet) | 200, 404 |
+| `GET /api/invoices?status=&customerId=&page=1&pageSize=20` | Invoices, newest number first; `status` is `Issued`, `PartiallyPaid` or `Paid` | 200, 400 |
+| `GET /api/invoices/{id}` | One invoice with lines, totals, payments, balance and `isOverdue` | 200, 404 |
+| `GET /api/invoices/{id}/pdf` | Download the invoice as `invoice-2026-00042.pdf` | 200, 404 |
+| `POST /api/invoices/{id}/payments` | Record money received (`amount`, `method`: `Cash`/`Card`/`BankTransfer`, `receivedAt?`) | 200, 400, 404, 409, 422 |
+
+An invoice is a snapshot of the work order, the customer's name and the
+vehicle at the time of issue and never changes afterwards. Line totals and
+`netTotal` are net; VAT is calculated once on the net total; `grossTotal`,
+payments and `balance` include VAT. Numbers are consecutive per calendar
+year (`2026-00001`, `2026-00002`, …); two invoices issued at the very same
+moment may collide on a number, and the loser gets 409 `conflict.duplicate`
+and can simply retry. A payment may not exceed the balance (422).
+
+The VAT rate, payment term and what is printed as the seller come from the
+`Invoicing` configuration section (`appsettings.json`, or environment
+variables such as `Invoicing__VatRatePercent=7`); invalid values stop the API
+at startup. Changing them never alters invoices already issued.
+
+```bash
+curl -s -X POST localhost:5080/api/work-orders/<work-order-id>/invoice
+curl -s localhost:5080/api/invoices/<invoice-id>/payments -H 'Content-Type: application/json' -d '{"amount":100,"method":"Cash"}'
+curl -s -o invoice.pdf localhost:5080/api/invoices/<invoice-id>/pdf
+```
+
 The endpoint tables above are pinned by
 `OpenApiContractTests` against `/openapi/v1.json`; change both together.
 
@@ -239,8 +269,8 @@ stable `code` to switch on:
 | --- | --- | --- |
 | 400 | `validation.failed` (+ `errors` per field) | body fields missing, blank, too long or out of range |
 | 400 | `request.malformed` | unreadable JSON, wrong value type, unparsable query/route value |
-| 400 | `paging.invalid_page`, `paging.invalid_page_size`, `schedule.unknown_time_zone` | paging out of range, unknown time zone |
-| 404 | `customer.not_found`, `vehicle.not_found`, `work_order.not_found`, `work_order.line_not_found`, `bay.not_found`, `appointment.not_found` / `route.not_found` | unknown resource / unknown URL |
+| 400 | `paging.invalid_page`, `paging.invalid_page_size`, `schedule.unknown_time_zone`, `invoice.unknown_status`, `invoice.unknown_payment_method` | paging out of range, unknown time zone, status or payment method |
+| 404 | `customer.not_found`, `vehicle.not_found`, `work_order.not_found`, `work_order.line_not_found`, `bay.not_found`, `appointment.not_found`, `invoice.not_found`, `invoice.not_issued` / `route.not_found` | unknown resource / unknown URL |
 | 405, 415 | `request.method_not_allowed`, `request.unsupported_media_type` | wrong method, non-JSON body |
 | 409 | `customer.has_vehicles`, `customer.has_work_orders`, `customer.has_appointments`, `vehicle.duplicate_vin`, `bay.duplicate_name`, `appointment.bay_out_of_service`, `appointment.bay_already_booked`, `appointment.vehicle_already_booked`, `conflict.duplicate`, `conflict.concurrent_update` | conflicts |
 | 422 | `domain.rule_violated` | business rule broken |

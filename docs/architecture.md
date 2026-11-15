@@ -226,6 +226,12 @@ authentication. Business rules do not live here.
   and answers with both the appointment and the work order it opened.
   `GET /api/schedule?date=…&timeZone=…` is the day schedule; `date` is
   required, the time zone defaults to UTC.
+  Invoices are issued at `POST /api/work-orders/{id}/invoice` (singular:
+  one per work order) and addressed at `/api/invoices/{id}` afterwards;
+  payments are added at `/payments` and answer with the whole invoice, and
+  `/pdf` downloads the document. `InvoicingSettings` (VAT rate, payment
+  term, the workshop's name and address) is bound from the `Invoicing`
+  configuration section and validated at startup.
 - Request records implement `IValidatableRequest` and check their shape
   (required, length, simple bounds, using the domain's constants); each
   endpoint group calls `WithRequestValidation()`, whose filter answers 400

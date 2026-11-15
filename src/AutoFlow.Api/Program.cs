@@ -2,9 +2,11 @@ using AutoFlow.Api.Appointments;
 using AutoFlow.Api.Bays;
 using AutoFlow.Api.Customers;
 using AutoFlow.Api.Errors;
+using AutoFlow.Api.Invoices;
 using AutoFlow.Api.Vehicles;
 using AutoFlow.Api.WorkOrders;
 using AutoFlow.Application;
+using AutoFlow.Application.Invoices;
 using AutoFlow.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -16,6 +18,11 @@ if (string.IsNullOrWhiteSpace(connectionString))
         "Connection string 'AutoFlow' is not configured. Set ConnectionStrings__AutoFlow " +
         "(appsettings.Development.json points at the docker-compose database).");
 }
+
+// Invalid invoicing settings stop the host here rather than failing the first invoice.
+var invoicing = builder.Configuration.GetSection(InvoicingSettings.SectionName).Get<InvoicingSettings>()
+    ?? InvoicingSettings.Default;
+builder.Services.AddSingleton(invoicing.Validated());
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(connectionString);
@@ -50,6 +57,7 @@ app.MapVehicleEndpoints();
 app.MapWorkOrderEndpoints();
 app.MapBayEndpoints();
 app.MapAppointmentEndpoints();
+app.MapInvoiceEndpoints();
 
 app.MapGet("/", () => Results.Ok(new { name = "AutoFlow API", status = "running" }))
     .WithName("GetApiInfo")

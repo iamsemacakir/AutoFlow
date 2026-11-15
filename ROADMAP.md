@@ -57,13 +57,13 @@ updated docs. Steps are done in order unless a dependency forces otherwise.
 - [x] Appointment endpoints and tests: check in (answers with the opened work order), cancel, no-show
 - [x] Day schedule endpoint (`GET /api/schedule`), appointment workflow test (book → move → schedule → check in → work order)
 
-## Milestone 6 — Invoices
+## Milestone 6 — Invoices ✅
 
 - [x] `Invoice` aggregate: snapshot of a completed work order, VAT on the net total, year/sequence number, payments (Issued → PartiallyPaid → Paid), due date
 - [x] Persistence: invoice, line and payment tables, migration, consecutive numbering and one invoice per work order by unique indexes, `IInvoiceRepository`
 - [x] Use cases: issue (next number of the year, marks the work order invoiced), record payment, get, get for a work order, list (paged, by status and customer)
 - [x] PDF export: `IInvoiceDocumentRenderer` port, dependency-free PDF renderer (multi-page table, totals, payments)
-- [ ] Endpoints and tests
+- [x] Endpoints and tests: issue, get (also by work order), list, record payment, PDF download; race tests for numbering and double invoicing, invoice workflow test
 
 ## Milestone 7 — Authentication & authorization
 

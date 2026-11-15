@@ -4,6 +4,7 @@ using System.Text.Json;
 using AutoFlow.Application.Appointments;
 using AutoFlow.Application.Bays;
 using AutoFlow.Application.Customers;
+using AutoFlow.Application.Invoices;
 using AutoFlow.Application.Vehicles;
 using AutoFlow.Application.WorkOrders;
 
@@ -54,6 +55,38 @@ internal static class ApiTestHelpers
         using var response = await client.PostAsJsonAsync(Url($"/api/vehicles/{vehicleId}/work-orders"), new { complaint });
         response.EnsureSuccessStatusCode();
         return (await response.Content.ReadFromJsonAsync<WorkOrderDetails>())!;
+    }
+
+    /// <summary>
+    /// A work order taken from intake to completion: one labour line of
+    /// 1.5 h × 95.00 (142.50 net, 169.58 gross at 19 % VAT).
+    /// </summary>
+    public static async Task<WorkOrderDetails> CompleteWorkOrderAsync(this HttpClient client, Guid vehicleId)
+    {
+        var workOrder = await client.OpenWorkOrderAsync(vehicleId, "Brakes squeal when cold");
+        using (var labour = await client.PostAsJsonAsync(
+            Url($"/api/work-orders/{workOrder.Id}/labour-lines"),
+            new { description = "Replace front brake pads", hours = 1.5m, hourlyRate = 95m }))
+        {
+            labour.EnsureSuccessStatusCode();
+        }
+
+        WorkOrderDetails? completed = null;
+        foreach (var action in new[] { "approve", "start", "complete" })
+        {
+            using var response = await client.PostAsync(Url($"/api/work-orders/{workOrder.Id}/{action}"), content: null);
+            response.EnsureSuccessStatusCode();
+            completed = await response.Content.ReadFromJsonAsync<WorkOrderDetails>();
+        }
+
+        return completed!;
+    }
+
+    public static async Task<InvoiceDetails> IssueInvoiceAsync(this HttpClient client, Guid workOrderId)
+    {
+        using var response = await client.PostAsync(Url($"/api/work-orders/{workOrderId}/invoice"), content: null);
+        response.EnsureSuccessStatusCode();
+        return (await response.Content.ReadFromJsonAsync<InvoiceDetails>())!;
     }
 
     /// <summary>

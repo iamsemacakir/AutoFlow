@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using AutoFlow.Application.Invoices;
 using AutoFlow.Application.Vehicles;
 using AutoFlow.Application.WorkOrders;
 using static AutoFlow.Api.Tests.ApiTestHelpers;
@@ -24,6 +25,11 @@ public sealed class ConcurrentRequestTests : IDisposable
 
     // Same for bookings: the clash pre-check, or the bay exclusion constraint.
     private static readonly string[] BayClashCodes = ["appointment.bay_already_booked", "conflict.duplicate"];
+
+    // A second invoice for one work order: refused by the domain once the first
+    // is committed, or by the work order's version / unique index during the race.
+    private static readonly string[] SecondInvoiceCodes =
+        ["domain.rule_violated", "conflict.concurrent_update", "conflict.duplicate"];
 
     private readonly HttpClient _client;
 
@@ -88,6 +94,63 @@ public sealed class ConcurrentRequestTests : IDisposable
                 Assert.Equal(HttpStatusCode.Conflict, outcome.StatusCode);
                 Assert.Contains(outcome.Code, BayClashCodes);
             });
+    }
+
+    [Fact]
+    public async Task Simultaneous_invoicing_of_one_work_order_issues_exactly_one_invoice()
+    {
+        var owner = await _client.CreateCustomerAsync("Anna", "Schmidt");
+        var vehicle = await RegisterVehicleAsync(owner.Id);
+        var workOrder = await _client.CompleteWorkOrderAsync(vehicle.Id);
+
+        var outcomes = await Task.WhenAll(Enumerable.Range(0, Contenders).Select(async _ =>
+        {
+            using var response = await _client.PostAsync(Url($"/api/work-orders/{workOrder.Id}/invoice"), content: null);
+            return (response.StatusCode, Code: await ReadProblemCodeAsync(response));
+        }));
+
+        Assert.Single(outcomes, outcome => outcome.StatusCode == HttpStatusCode.Created);
+        Assert.All(
+            outcomes.Where(outcome => outcome.StatusCode != HttpStatusCode.Created),
+            outcome => Assert.Contains(outcome.Code, SecondInvoiceCodes));
+        var invoice = await _client.GetFromJsonAsync<InvoiceDetails>(Url($"/api/work-orders/{workOrder.Id}/invoice"));
+        Assert.Equal(workOrder.Id, invoice!.WorkOrderId);
+    }
+
+    [Fact]
+    public async Task Simultaneous_invoices_for_different_work_orders_never_share_a_number()
+    {
+        var owner = await _client.CreateCustomerAsync("Anna", "Schmidt");
+        var workOrders = new List<Guid>();
+        for (var i = 0; i < Contenders; i++)
+        {
+            var vehicle = await RegisterVehicleAsync(owner.Id);
+            workOrders.Add((await _client.CompleteWorkOrderAsync(vehicle.Id)).Id);
+        }
+
+        var outcomes = await Task.WhenAll(workOrders.Select(async id =>
+        {
+            using var response = await _client.PostAsync(Url($"/api/work-orders/{id}/invoice"), content: null);
+            return (WorkOrderId: id, response.StatusCode, Code: await ReadProblemCodeAsync(response));
+        }));
+
+        // A request that drew a number another one stored first is told to try again (ADR 0019).
+        Assert.All(
+            outcomes.Where(outcome => outcome.StatusCode != HttpStatusCode.Created),
+            outcome => Assert.Equal((HttpStatusCode.Conflict, "conflict.duplicate"), (outcome.StatusCode, outcome.Code)));
+        foreach (var retry in outcomes.Where(outcome => outcome.StatusCode != HttpStatusCode.Created))
+        {
+            await _client.IssueInvoiceAsync(retry.WorkOrderId);
+        }
+
+        var numbers = new List<string>();
+        foreach (var id in workOrders)
+        {
+            var invoice = await _client.GetFromJsonAsync<InvoiceDetails>(Url($"/api/work-orders/{id}/invoice"));
+            numbers.Add(invoice!.Number);
+        }
+
+        Assert.Equal(Contenders, numbers.Distinct(StringComparer.Ordinal).Count());
     }
 
     [Fact]

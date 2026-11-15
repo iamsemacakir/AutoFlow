@@ -53,6 +53,12 @@ public sealed class OpenApiContractTests(WebApplicationFactory<Program> factory)
         { "CancelAppointment", "POST", "/api/appointments/{id}/cancel", "200 400 404 409 422" },
         { "MarkAppointmentNoShow", "POST", "/api/appointments/{id}/no-show", "200 404 409 422" },
         { "GetDaySchedule", "GET", "/api/schedule", "200 400" },
+        { "IssueInvoice", "POST", "/api/work-orders/{workOrderId}/invoice", "201 404 409 422" },
+        { "GetWorkOrderInvoice", "GET", "/api/work-orders/{workOrderId}/invoice", "200 404" },
+        { "ListInvoices", "GET", "/api/invoices", "200 400" },
+        { "GetInvoice", "GET", "/api/invoices/{id}", "200 404" },
+        { "ExportInvoicePdf", "GET", "/api/invoices/{id}/pdf", "200 404" },
+        { "RecordPayment", "POST", "/api/invoices/{id}/payments", "200 400 404 409 422" },
     };
 
     [Theory]
@@ -123,6 +129,12 @@ public sealed class OpenApiContractTests(WebApplicationFactory<Program> factory)
     [InlineData("CheckedInAppointment", "appointment workOrder")]
     [InlineData("DaySchedule", "bays date end start timeZone")]
     [InlineData("BaySchedule", "appointments bay")]
+    [InlineData(
+        "InvoiceDetails",
+        "amountPaid balance customerId customerName dueDate grossTotal id isOverdue issuedAt lines netTotal number " +
+        "paidAt payments status vatAmount vatRatePercent vehicleDescription workOrderId")]
+    [InlineData("InvoiceLineDetails", "description kind number partNumber quantity total unitPrice")]
+    [InlineData("InvoicePaymentDetails", "amount id method receivedAt")]
     [InlineData("WorkOrderLineDetails", "description id kind number partNumber quantity total unitPrice")]
     public async Task Read_models_are_documented_with_camel_case_properties(string schema, string properties)
     {
