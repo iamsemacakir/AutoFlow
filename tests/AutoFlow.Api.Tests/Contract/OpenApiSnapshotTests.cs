@@ -28,6 +28,7 @@ public sealed class OpenApiSnapshotTests(WebApplicationFactory<Program> factory)
 
         if (Environment.GetEnvironmentVariable(UpdateVariable) == "1")
         {
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
             await File.WriteAllTextAsync(path, live.ToJsonString(Indented) + "\n");
         }
 
