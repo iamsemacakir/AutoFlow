@@ -13,17 +13,17 @@ jobs:
       - uses: actions/setup-dotnet@v5
         with:
           global-json-file: global.json
+      - run: dotnet tool restore
       - run: dotnet build AutoFlow.slnx -c Release
-      - name: Unit tests
+      - name: Add migration
+        run: dotnet ef migrations add AddUsers --project src/AutoFlow.Infrastructure --output-dir Persistence/Migrations
+      - name: Dump migration
         run: |
-          dotnet test tests/AutoFlow.Application.Tests -c Release --no-build
-          AUTOFLOW_PDF_SAMPLE_DIR=$PWD/samples dotnet test tests/AutoFlow.Infrastructure.Tests -c Release --no-build --filter "FullyQualifiedName~PdfInvoiceRendererTests"
-      - name: Check PDFs
-        if: always()
-        run: |
-          sudo apt-get install -y -qq poppler-utils qpdf > /dev/null
-          ls -la samples
-          for f in samples/*.pdf; do echo "== $f"; qpdf --check "$f" || true; pdftotext -layout "$f" - | head -70; done
-          pdftoppm -r 70 -png -f 1 -l 1 samples/sample-invoice-3000-00042.pdf p1
-          pdftoppm -r 50 -png -f 3 -l 3 samples/samplelong-invoice-3000-00042.pdf p3
-          for f in p1*.png p3*.png; do echo "BEGIN_PNG $f"; base64 -w0 "$f" | fold -w 4000; echo; echo "END_PNG"; done
+          git status --short
+          tar czf - $(git status --short src/AutoFlow.Infrastructure/Persistence/Migrations | awk '{print $2}') | base64 -w0 > m.b64
+          echo "BEGIN_B64"
+          fold -w 4000 m.b64
+          echo
+          echo "END_B64"
+      - name: Test
+        run: dotnet test AutoFlow.slnx -c Release
