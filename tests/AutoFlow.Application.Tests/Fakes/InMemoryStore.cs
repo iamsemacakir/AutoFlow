@@ -4,6 +4,7 @@ using AutoFlow.Domain.Appointments;
 using AutoFlow.Domain.Bays;
 using AutoFlow.Domain.Customers;
 using AutoFlow.Domain.Invoices;
+using AutoFlow.Domain.Users;
 using AutoFlow.Domain.Vehicles;
 using AutoFlow.Domain.WorkOrders;
 
@@ -21,7 +22,8 @@ public sealed class InMemoryStore
     IWorkOrderRepository,
     IBayRepository,
     IAppointmentRepository,
-    IInvoiceRepository
+    IInvoiceRepository,
+    IUserRepository
 {
     private readonly Dictionary<Guid, Customer> _customers = [];
     private readonly Dictionary<Guid, Vehicle> _vehicles = [];
@@ -35,12 +37,16 @@ public sealed class InMemoryStore
     private readonly Dictionary<Guid, Appointment> _appointments = [];
     private readonly List<Appointment> _pendingAppointments = [];
 
+    private readonly Dictionary<Guid, User> _users = [];
+    private readonly List<User> _pendingUsers = [];
     private readonly Dictionary<Guid, Invoice> _invoices = [];
     private readonly List<Invoice> _pendingInvoices = [];
 
     public int SaveCount { get; private set; }
 
     public IReadOnlyCollection<Invoice> Invoices => _invoices.Values;
+
+    public IReadOnlyCollection<User> Users => _users.Values;
 
     public IReadOnlyCollection<Customer> Customers => _customers.Values;
 
@@ -94,8 +100,17 @@ public sealed class InMemoryStore
         return invoice;
     }
 
+    /// <inheritdoc cref="Seed(Customer)"/>
+    public User Seed(User user)
+    {
+        _users.Add(user.Id, user);
+        return user;
+    }
+
     public Task SaveChangesAsync(CancellationToken cancellationToken = default)
     {
+        _pendingUsers.ForEach(u => _users.Add(u.Id, u));
+        _pendingUsers.Clear();
         _pendingInvoices.ForEach(i => _invoices.Add(i.Id, i));
         _pendingInvoices.Clear();
         _pendingCustomers.ForEach(c => _customers.Add(c.Id, c));
@@ -272,4 +287,25 @@ public sealed class InMemoryStore
     }
 
     public void Add(Invoice invoice) => _pendingInvoices.Add(invoice);
+
+    Task<User?> IUserRepository.GetByIdAsync(Guid id, CancellationToken cancellationToken) =>
+        Task.FromResult(_users.GetValueOrDefault(id));
+
+    public Task<User?> GetByEmailAsync(EmailAddress email, CancellationToken cancellationToken = default) =>
+        Task.FromResult(_users.Values.FirstOrDefault(u => u.Email == email));
+
+    public Task<bool> ExistsWithEmailAsync(EmailAddress email, CancellationToken cancellationToken = default) =>
+        Task.FromResult(_users.Values.Any(u => u.Email == email));
+
+    public Task<bool> AnyAsync(CancellationToken cancellationToken = default) =>
+        Task.FromResult(_users.Count > 0);
+
+    public Task<int> CountActiveOwnersAsync(CancellationToken cancellationToken = default) =>
+        Task.FromResult(_users.Values.Count(u => u.IsActive && u.Role == UserRole.Owner));
+
+    Task<IReadOnlyList<User>> IUserRepository.ListAsync(CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyList<User>>(
+        [.. _users.Values.OrderBy(u => u.DisplayName, StringComparer.Ordinal).ThenBy(u => u.Id)]);
+
+    public void Add(User user) => _pendingUsers.Add(user);
 }

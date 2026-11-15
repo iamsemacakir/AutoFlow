@@ -3,6 +3,7 @@ using AutoFlow.Domain.Appointments;
 using AutoFlow.Domain.Bays;
 using AutoFlow.Domain.Customers;
 using AutoFlow.Domain.Invoices;
+using AutoFlow.Domain.Users;
 using AutoFlow.Domain.Vehicles;
 using AutoFlow.Domain.WorkOrders;
 using AutoFlow.Infrastructure.Persistence.Configurations;
@@ -30,6 +31,8 @@ public sealed class AutoFlowDbContext(DbContextOptions<AutoFlowDbContext> option
     public DbSet<Appointment> Appointments => Set<Appointment>();
 
     public DbSet<Invoice> Invoices => Set<Invoice>();
+
+    public DbSet<User> Users => Set<User>();
 
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
     {

@@ -16,6 +16,7 @@ internal static class ErrorResults
         var (status, title) = error.Kind switch
         {
             ErrorKind.Validation => (StatusCodes.Status400BadRequest, "Invalid request"),
+            ErrorKind.Unauthorized => (StatusCodes.Status401Unauthorized, "Unauthorized"),
             ErrorKind.NotFound => (StatusCodes.Status404NotFound, "Not found"),
             ErrorKind.Conflict => (StatusCodes.Status409Conflict, "Conflict"),
             _ => throw new ArgumentOutOfRangeException(nameof(error), error.Kind, "Unknown error kind."),

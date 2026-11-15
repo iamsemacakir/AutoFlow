@@ -1,5 +1,6 @@
 using AutoFlow.Domain.Appointments;
 using AutoFlow.Domain.Invoices;
+using AutoFlow.Domain.Users;
 using AutoFlow.Domain.Vehicles;
 using AutoFlow.Domain.WorkOrders;
 using AutoFlow.Infrastructure.Persistence;
@@ -63,10 +64,22 @@ public class ModelTests
         using var db = CreateContext();
         var invoice = db.Model.FindEntityType(typeof(Invoice))!;
 
-        var unique = invoice.GetIndexes().Where(i => i.IsUnique).Select(i => i.GetDatabaseName()).Order().ToArray();
+        var unique = invoice.GetIndexes().Where(i => i.IsUnique).Select(i => i.GetDatabaseName()!).Order().ToArray();
 
         Assert.Equal(["ux_invoices_work_order_id", "ux_invoices_year_sequence"], unique);
         Assert.Null(invoice.FindProperty(nameof(Invoice.Number)));
+    }
+
+    [Fact]
+    public void User_email_is_unique()
+    {
+        using var db = CreateContext();
+        var user = db.Model.FindEntityType(typeof(User))!;
+
+        var index = Assert.Single(user.GetIndexes());
+
+        Assert.True(index.IsUnique);
+        Assert.Equal("ux_users_email", index.GetDatabaseName());
     }
 
     [Fact]

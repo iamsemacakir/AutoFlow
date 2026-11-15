@@ -1,6 +1,7 @@
 using AutoFlow.Application.Abstractions;
 using AutoFlow.Application.Bays;
 using AutoFlow.Application.Customers;
+using AutoFlow.Application.Users;
 using AutoFlow.Application.Vehicles;
 using AutoFlow.Application.WorkOrders;
 using AutoFlow.Infrastructure.Persistence;
@@ -32,6 +33,11 @@ public class CompositionTests(WebApplicationFactory<Program> factory)
     [InlineData(typeof(IWorkOrderRepository))]
     [InlineData(typeof(IBayRepository))]
     [InlineData(typeof(IAppointmentRepository))]
+    [InlineData(typeof(IUserRepository))]
+    [InlineData(typeof(IPasswordHasher))]
+    [InlineData(typeof(IAccessTokenIssuer))]
+    [InlineData(typeof(SignInHandler))]
+    [InlineData(typeof(CreateUserHandler))]
     public void Use_case_handlers_and_persistence_resolve_per_request(Type service)
     {
         using var scope = factory.Services.CreateScope();

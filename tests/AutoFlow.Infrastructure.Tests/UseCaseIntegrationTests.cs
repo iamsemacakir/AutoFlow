@@ -1,4 +1,5 @@
 using AutoFlow.Application;
+using AutoFlow.Application.Abstractions;
 using AutoFlow.Application.Appointments;
 using AutoFlow.Application.Bays;
 using AutoFlow.Application.Common;
@@ -27,6 +28,9 @@ public sealed class UseCaseIntegrationTests : IDisposable
 
         _provider = new ServiceCollection()
             .AddSingleton<TimeProvider>(new FixedTimeProvider(TestData.Now))
+
+            // Access tokens are issued by the API host; sign-in is not exercised here.
+            .AddSingleton<IAccessTokenIssuer, UnusedTokenIssuer>()
             .AddApplication()
             .AddInfrastructure(postgres.ConnectionString)
             .BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true });
@@ -198,5 +202,11 @@ public sealed class UseCaseIntegrationTests : IDisposable
     private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
     {
         public override DateTimeOffset GetUtcNow() => now;
+    }
+
+    private sealed class UnusedTokenIssuer : IAccessTokenIssuer
+    {
+        public AccessToken Issue(Domain.Users.User user) =>
+            throw new InvalidOperationException("Tokens are not issued in these tests.");
     }
 }

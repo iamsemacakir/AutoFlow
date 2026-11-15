@@ -35,6 +35,8 @@ public sealed class ProblemDetailsConventionsTests
 
     [Theory]
     [InlineData(400, ProblemCodes.MalformedRequest)]
+    [InlineData(401, ProblemCodes.Unauthenticated)]
+    [InlineData(403, ProblemCodes.Forbidden)]
     [InlineData(404, ProblemCodes.RouteNotFound)]
     [InlineData(405, ProblemCodes.MethodNotAllowed)]
     [InlineData(415, ProblemCodes.UnsupportedMediaType)]

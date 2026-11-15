@@ -67,7 +67,7 @@ updated docs. Steps are done in order unless a dependency forces otherwise.
 
 ## Milestone 7 — Authentication & authorization
 
-- [ ] Identity/JWT, roles (Owner, ServiceAdvisor, Mechanic)
+- [x] Staff accounts and JWT sign-in: roles (Owner, ServiceAdvisor, Mechanic), PBKDF2 hashes, account management for owners, initial owner and migrations on startup
 - [ ] Policy-based authorization on endpoints
 
 ## Milestone 8 — Web UI

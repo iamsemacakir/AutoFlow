@@ -65,6 +65,8 @@ public class MigrationTests
         Assert.Contains("CREATE UNIQUE INDEX ux_invoices_year_sequence", script, StringComparison.Ordinal);
         Assert.Contains("CREATE UNIQUE INDEX ux_invoices_work_order_id", script, StringComparison.Ordinal);
         Assert.Contains("CONSTRAINT ck_invoices_status", script, StringComparison.Ordinal);
+        Assert.Contains("CREATE TABLE users", script, StringComparison.Ordinal);
+        Assert.Contains("CREATE UNIQUE INDEX ux_users_email", script, StringComparison.Ordinal);
         // xmin is a PostgreSQL system column and must never be created explicitly.
         Assert.DoesNotContain("xmin xid", script, StringComparison.Ordinal);
     }
