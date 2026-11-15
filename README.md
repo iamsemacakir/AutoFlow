@@ -54,7 +54,24 @@ Early foundation. See [ROADMAP.md](ROADMAP.md) for what is done and what comes n
 | Auth: role policies on every endpoint, closed by default | ✅ |
 | Web UI (React + TypeScript): schedule, customers, vehicles, work orders, invoices, bays, staff | ✅ |
 | Typed API client generated from the OpenAPI document | ✅ |
-| Deployment | ⏳ planned |
+| Deployment: Docker images, Compose stack with demo workshop, image pipeline | ✅ |
+| Observability: JSON logs, health checks, OpenTelemetry metrics and traces | ✅ |
+
+## Try it
+
+With Docker, one command starts the database, the API and the web client
+with an invented demo workshop:
+
+```bash
+docker compose up --build
+```
+
+Open <http://localhost:8080> and sign in as `owner@autoflow.demo`,
+`advisor@autoflow.demo` or `mechanic@autoflow.demo` — the password is
+`autoflow-demo` for all three. The API itself is on <http://localhost:5080>
+(`/health/ready`, `/metrics`). These are demo credentials: set
+`AUTOFLOW_SIGNING_KEY` and `AUTOFLOW_OWNER_PASSWORD` before using the stack
+for anything else.
 
 ## Getting started
 
@@ -101,12 +118,12 @@ tests once with `AUTOFLOW_UPDATE_OPENAPI=1` to refresh the copy, then
 
 ### Local database
 
-`docker-compose.yml` starts PostgreSQL 17 on `localhost:5432`
+`docker compose up -d db` starts PostgreSQL 17 on `localhost:5432`
 (database, user and password `autoflow`). The schema is managed by EF Core
 migrations; the `dotnet ef` tool is pinned in `.config/dotnet-tools.json`.
 
 ```bash
-docker compose up -d               # start PostgreSQL
+docker compose up -d db            # start only PostgreSQL
 dotnet tool restore                # installs dotnet-ef
 dotnet ef database update --project src/AutoFlow.Infrastructure
 ```
@@ -387,7 +404,7 @@ tests/
   AutoFlow.Infrastructure.Tests/ persistence tests against PostgreSQL (Testcontainers)
   AutoFlow.Api.Tests/      HTTP tests of the full stack (WebApplicationFactory + PostgreSQL):
                            endpoints, OpenAPI contract, simultaneous requests, workflows
-docker-compose.yml   local PostgreSQL for development
+docker-compose.yml   PostgreSQL for development, or the whole stack with the demo workshop
 docs/
   architecture.md    layers, dependency rules, conventions
   adr/               architecture decision records

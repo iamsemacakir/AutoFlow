@@ -77,8 +77,8 @@ updated docs. Steps are done in order unless a dependency forces otherwise.
 
 ## Milestone 9 — Deployment
 
-- [ ] Dockerfiles, compose for full stack
-- [ ] Deployment pipeline and environment configuration
+- [x] Dockerfiles (API on the ASP.NET Core runtime image as non-root, web client on nginx), Compose for the full stack with the demo workshop
+- [x] Deployment pipeline (images built on every push, published to GHCR for `v*` tags) and environment configuration
 - [x] Observability: JSON logs, liveness/readiness checks, OpenTelemetry metrics and traces (OTLP, Prometheus) with business metrics
 
 ## Done criteria for "AutoFlow finished"

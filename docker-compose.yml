@@ -1,9 +1,14 @@
-# Local development database. Start with `docker compose up -d`, then apply
-# the schema with `dotnet ef database update` (see README).
-# The credentials are for local use only and match
-# AutoFlowDbContextFactory.LocalConnectionString.
+# AutoFlow with Docker Compose.
+#
+#   docker compose up --build        the whole application with a demo workshop:
+#                                    http://localhost:8080 (sign in as owner@autoflow.demo /
+#                                    autoflow-demo), API on http://localhost:5080
+#   docker compose up -d db          only PostgreSQL, for running the API with `dotnet run`
+#
+# Every credential below is a demo value. Set AUTOFLOW_SIGNING_KEY (32+ random
+# characters) and real passwords for anything but trying AutoFlow out.
 services:
-  postgres:
+  db:
     image: postgres:17-alpine
     container_name: autoflow-postgres
     environment:
@@ -19,6 +24,38 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: src/AutoFlow.Api/Dockerfile
+    image: autoflow-api
+    environment:
+      ConnectionStrings__AutoFlow: Host=db;Port=5432;Database=autoflow;Username=autoflow;Password=autoflow
+      Database__MigrateOnStartup: "true"
+      Auth__SigningKey: ${AUTOFLOW_SIGNING_KEY:-demo-only-signing-key-replace-me-0123456789abcdef}
+      Auth__InitialOwner__Email: owner@autoflow.demo
+      Auth__InitialOwner__DisplayName: Olga Owner
+      Auth__InitialOwner__Password: ${AUTOFLOW_OWNER_PASSWORD:-autoflow-demo}
+      Seed__DemoData: "true"
+      Seed__TimeZone: ${AUTOFLOW_TIME_ZONE:-Europe/Berlin}
+      Metrics__Prometheus: "true"
+    ports:
+      - "5080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  web:
+    build: ./web
+    image: autoflow-web
+    ports:
+      - "8080:80"
+    depends_on:
+      api:
+        condition: service_healthy
     restart: unless-stopped
 
 volumes:
