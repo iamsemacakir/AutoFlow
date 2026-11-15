@@ -21,7 +21,7 @@ public sealed class CustomerEndpointsTests : IDisposable
         ArgumentNullException.ThrowIfNull(api);
 
         _api = api;
-        _client = api.Factory.CreateClient();
+        _client = api.CreateClient();
     }
 
     [Fact]

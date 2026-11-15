@@ -1,3 +1,4 @@
+using AutoFlow.Api.Auth;
 using AutoFlow.Api.Errors;
 using AutoFlow.Api.Validation;
 using AutoFlow.Application.Common;
@@ -47,6 +48,8 @@ internal static class InvoiceEndpoints
 
         ofWorkOrder.MapPost("/", IssueInvoice)
             .WithName("IssueInvoice")
+            .RequireAuthorization(Policies.FrontDesk)
+            .ProducesAuthProblems()
             .WithSummary("Issues the invoice for a completed work order with the next number of the year.")
             .Produces<InvoiceDetails>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status404NotFound)
@@ -55,6 +58,8 @@ internal static class InvoiceEndpoints
 
         ofWorkOrder.MapGet("/", GetWorkOrderInvoice)
             .WithName("GetWorkOrderInvoice")
+            .RequireAuthorization(Policies.FrontDesk)
+            .ProducesAuthProblems()
             .WithSummary("Gets the invoice issued for a work order.")
             .Produces<InvoiceDetails>()
             .ProducesProblem(StatusCodes.Status404NotFound);
@@ -63,24 +68,32 @@ internal static class InvoiceEndpoints
 
         invoices.MapGet("/", ListInvoices)
             .WithName("ListInvoices")
+            .RequireAuthorization(Policies.FrontDesk)
+            .ProducesAuthProblems()
             .WithSummary("Lists invoices page by page, newest number first, optionally by status and customer.")
             .Produces<PagedList<InvoiceDetails>>()
             .ProducesProblem(StatusCodes.Status400BadRequest);
 
         invoices.MapGet("/{id:guid}", GetInvoice)
             .WithName(GetInvoiceRoute)
+            .RequireAuthorization(Policies.FrontDesk)
+            .ProducesAuthProblems()
             .WithSummary("Gets an invoice with its lines, totals and payments.")
             .Produces<InvoiceDetails>()
             .ProducesProblem(StatusCodes.Status404NotFound);
 
         invoices.MapGet("/{id:guid}/pdf", ExportInvoice)
             .WithName("ExportInvoicePdf")
+            .RequireAuthorization(Policies.FrontDesk)
+            .ProducesAuthProblems()
             .WithSummary("Downloads the invoice as a PDF, with the payments received so far.")
             .Produces(StatusCodes.Status200OK, contentType: "application/pdf")
             .ProducesProblem(StatusCodes.Status404NotFound);
 
         invoices.MapPost("/{id:guid}/payments", RecordPayment)
             .WithName("RecordPayment")
+            .RequireAuthorization(Policies.FrontDesk)
+            .ProducesAuthProblems()
             .WithSummary("Records money received; part payments are fine, more than the balance is not.")
             .Produces<InvoiceDetails>()
             .ProducesValidationProblem()

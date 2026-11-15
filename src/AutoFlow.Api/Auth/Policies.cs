@@ -23,7 +23,10 @@ public static class Policies
     {
         ArgumentNullException.ThrowIfNull(builder);
 
+        // Anything without a policy of its own needs at least a valid token, so a new
+        // endpoint is never open by accident; public endpoints opt out explicitly.
         return builder
+            .SetFallbackPolicy(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build())
             .AddPolicy(Staff, policy => policy.RequireRole(Names(UserRole.Owner, UserRole.ServiceAdvisor, UserRole.Mechanic)))
             .AddPolicy(FrontDesk, policy => policy.RequireRole(Names(UserRole.Owner, UserRole.ServiceAdvisor)))
             .AddPolicy(ManageWorkshop, policy => policy.RequireRole(Names(UserRole.Owner)));

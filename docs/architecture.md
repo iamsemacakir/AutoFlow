@@ -257,8 +257,12 @@ authentication. Business rules do not live here.
   tokens with `Auth:SigningKey`, and every request re-reads the account so
   deactivation and role changes apply at once. Endpoints name an
   authorization policy (`Policies.Staff`, `FrontDesk`, `ManageWorkshop`)
-  and document 401/403 with `ProducesAuthProblems()`. `/api/auth/token` is
-  the only anonymous API endpoint. `DatabaseInitializer` applies migrations
+  and document 401/403 with `ProducesAuthProblems()`. A fallback policy
+  requires a signed-in user for anything without a policy of its own, so a
+  new endpoint is closed until someone decides otherwise;
+  `AuthorizationMatrixTests` pins the policy of every named endpoint.
+  `/api/auth/token`, `/health` and the OpenAPI document are the only
+  anonymous paths. `DatabaseInitializer` applies migrations
   and creates the initial owner on start when configured to.
 - `Program.cs` is the composition root: `AddApplication()` plus
   `AddInfrastructure(ConnectionStrings:AutoFlow)`. A missing connection string

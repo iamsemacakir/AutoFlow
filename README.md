@@ -51,8 +51,9 @@ Early foundation. See [ROADMAP.md](ROADMAP.md) for what is done and what comes n
 | Invoices: PDF export (dependency-free renderer behind a port) | ✅ |
 | Invoices: endpoints (issue, payments, PDF download, list) | ✅ |
 | Auth: staff accounts, JWT sign-in, roles, account management | ✅ |
-| Auth: role policies on every endpoint | ⏳ next |
-| UI, deployment | ⏳ planned |
+| Auth: role policies on every endpoint, closed by default | ✅ |
+| Web UI (React + TypeScript) | ⏳ next |
+| Deployment | ⏳ planned |
 
 ## Getting started
 
@@ -121,6 +122,21 @@ curl -s localhost:5080/api/auth/me -H "Authorization: Bearer $TOKEN"
 | `GET /api/users/{id}` | One account | 200, 401, 403, 404 |
 | `PUT /api/users/{id}/role` | Change the role (`Owner`, `ServiceAdvisor`, `Mechanic`) | 200, 400, 401, 403, 404, 409 |
 | `POST /api/users/{id}/deactivate` / `reactivate` | Close or reopen an account; a closed account's tokens stop working at once | 200, 401, 403, 404, 409, 422 |
+
+Who may do what:
+
+| Area | Mechanic | Service advisor | Owner |
+| --- | --- | --- | --- |
+| Read customers, vehicles, work orders, bays, appointments, the day schedule | ✅ | ✅ | ✅ |
+| Record mileage; add/remove work order lines; start and complete work | ✅ | ✅ | ✅ |
+| Register customers and vehicles, transfer vehicles | — | ✅ | ✅ |
+| Open, approve and cancel work orders; book and settle appointments | — | ✅ | ✅ |
+| Invoices and payments | — | ✅ | ✅ |
+| Bays and staff accounts | — | — | ✅ |
+
+Every API path needs a token (401 `auth.unauthenticated` without one, 403
+`auth.forbidden` without the role) except sign-in, `/health` and the
+OpenAPI document. The matrix is pinned by `AuthorizationMatrixTests`.
 
 Passwords need 10 to 128 characters. Tokens are signed with
 `Auth:SigningKey` (set `Auth__SigningKey` to a long random value outside

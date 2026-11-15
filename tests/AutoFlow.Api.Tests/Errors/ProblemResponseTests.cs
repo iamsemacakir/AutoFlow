@@ -2,20 +2,20 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
-using Microsoft.AspNetCore.Mvc.Testing;
 using static AutoFlow.Api.Tests.ApiTestHelpers;
 
 namespace AutoFlow.Api.Tests.Errors;
 
 /// <summary>
 /// Requests that are rejected before any use case runs: invalid or unreadable
-/// bodies, unmatched routes and methods. None of them reaches the database, so
-/// the host runs without a PostgreSQL container.
+/// bodies, unmatched routes and methods. They are sent by a signed-in owner
+/// (authentication reads the account, so the class shares the database
+/// fixture), but none of them reaches a use case.
 /// </summary>
-public sealed class ProblemResponseTests(WebApplicationFactory<Program> factory)
-    : IClassFixture<WebApplicationFactory<Program>>, IDisposable
+[Collection(ApiDatabaseDefinition.Name)]
+public sealed class ProblemResponseTests(ApiDatabaseFixture api) : IDisposable
 {
-    private readonly HttpClient _client = factory.CreateClient();
+    private readonly HttpClient _client = api.CreateClient();
 
     [Fact]
     public async Task Post_customer_with_missing_fields_lists_every_field_error()

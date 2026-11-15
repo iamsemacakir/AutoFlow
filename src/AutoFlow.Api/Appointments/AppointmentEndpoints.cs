@@ -1,3 +1,4 @@
+using AutoFlow.Api.Auth;
 using AutoFlow.Api.Errors;
 using AutoFlow.Api.Validation;
 using AutoFlow.Application.Appointments;
@@ -101,6 +102,8 @@ internal static class AppointmentEndpoints
 
         byVehicle.MapPost("/", BookAppointment)
             .WithName("BookAppointment")
+            .RequireAuthorization(Policies.FrontDesk)
+            .ProducesAuthProblems()
             .WithSummary("Books a bay and slot for the vehicle, for its current owner.")
             .Produces<AppointmentDetails>(StatusCodes.Status201Created)
             .ProducesValidationProblem()
@@ -112,12 +115,16 @@ internal static class AppointmentEndpoints
 
         appointments.MapGet("/{id:guid}", GetAppointment)
             .WithName(GetAppointmentRoute)
+            .RequireAuthorization(Policies.Staff)
+            .ProducesAuthProblems()
             .WithSummary("Gets an appointment, in any status.")
             .Produces<AppointmentDetails>()
             .ProducesProblem(StatusCodes.Status404NotFound);
 
         appointments.MapPost("/{id:guid}/reschedule", RescheduleAppointment)
             .WithName("RescheduleAppointment")
+            .RequireAuthorization(Policies.FrontDesk)
+            .ProducesAuthProblems()
             .WithSummary("Moves a scheduled appointment to another slot, another bay, or both.")
             .Produces<AppointmentDetails>()
             .ProducesValidationProblem()
@@ -127,6 +134,8 @@ internal static class AppointmentEndpoints
 
         appointments.MapPost("/{id:guid}/check-in", CheckInAppointment)
             .WithName("CheckInAppointment")
+            .RequireAuthorization(Policies.FrontDesk)
+            .ProducesAuthProblems()
             .WithSummary("The vehicle has arrived: opens a draft work order for it and checks the appointment in.")
             .Produces<CheckedInAppointment>()
             .ProducesValidationProblem()
@@ -136,6 +145,8 @@ internal static class AppointmentEndpoints
 
         appointments.MapPost("/{id:guid}/cancel", CancelAppointment)
             .WithName("CancelAppointment")
+            .RequireAuthorization(Policies.FrontDesk)
+            .ProducesAuthProblems()
             .WithSummary("Calls off a scheduled appointment, with a reason; its slot is free again at once.")
             .Produces<AppointmentDetails>()
             .ProducesValidationProblem()
@@ -145,6 +156,8 @@ internal static class AppointmentEndpoints
 
         appointments.MapPost("/{id:guid}/no-show", MarkAppointmentNoShow)
             .WithName("MarkAppointmentNoShow")
+            .RequireAuthorization(Policies.FrontDesk)
+            .ProducesAuthProblems()
             .WithSummary("Records that the vehicle did not arrive, once the slot has begun.")
             .Produces<AppointmentDetails>()
             .ProducesProblem(StatusCodes.Status404NotFound)
@@ -154,6 +167,8 @@ internal static class AppointmentEndpoints
         app.MapGroup("/api/schedule").WithTags(Tag)
             .MapGet("/", GetDaySchedule)
             .WithName("GetDaySchedule")
+            .RequireAuthorization(Policies.Staff)
+            .ProducesAuthProblems()
             .WithSummary("One day's appointments per bay; the day is read in the given IANA time zone (default UTC).")
             .Produces<DaySchedule>()
             .ProducesProblem(StatusCodes.Status400BadRequest);
