@@ -275,6 +275,12 @@ authentication. Business rules do not live here.
   stops the host at startup instead of failing on the first request.
   `appsettings.Development.json` points at the docker-compose database.
 
+**Web client** (`web/`) — React + TypeScript, built with Vite. Screens in
+`src/pages`, server state in TanStack Query, and every API call goes
+through `openapi-fetch` typed by `src/api/schema.d.ts`, generated from
+`web/openapi.json`. The token is attached by a client middleware; a 401
+signs the user out. See [ADR 0022](adr/0022-web-client.md).
+
 ## Error handling
 
 Two kinds of failure, two mechanisms:

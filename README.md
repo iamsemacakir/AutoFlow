@@ -4,8 +4,8 @@
 
 AutoFlow is a management system for independent car workshops: customers,
 their vehicles, work orders, appointments and invoices — built with
-**C# / .NET 10** and **ASP.NET Core**, with PostgreSQL and a React + TypeScript
-front end planned.
+**C# / .NET 10** and **ASP.NET Core** on PostgreSQL, with a **React +
+TypeScript** web client.
 
 ## Status
 
@@ -52,7 +52,8 @@ Early foundation. See [ROADMAP.md](ROADMAP.md) for what is done and what comes n
 | Invoices: endpoints (issue, payments, PDF download, list) | ✅ |
 | Auth: staff accounts, JWT sign-in, roles, account management | ✅ |
 | Auth: role policies on every endpoint, closed by default | ✅ |
-| Web UI (React + TypeScript) | ⏳ next |
+| Web UI (React + TypeScript): schedule, customers, vehicles, work orders, invoices, bays, staff | ✅ |
+| Typed API client generated from the OpenAPI document | ✅ |
 | Deployment | ⏳ planned |
 
 ## Getting started
@@ -66,6 +67,25 @@ dotnet build
 dotnet test
 dotnet run --project src/AutoFlow.Api   # http://localhost:5080
 ```
+
+### Web client
+
+The React + TypeScript client lives in `web/` (Node.js 22). With the API
+running on `localhost:5080`:
+
+```bash
+cd web
+npm ci
+npm run dev          # http://localhost:5173, forwards /api to the API
+npm test             # Vitest + Testing Library
+npm run build        # type check and production build into dist/
+```
+
+Sign in with an account of the API (see "Signing in" below). The client's
+API types are generated from `web/openapi.json`, a committed copy of the
+API's OpenAPI document: after changing the API's contract, run the API
+tests once with `AUTOFLOW_UPDATE_OPENAPI=1` to refresh the copy, then
+`npm run generate:api`. CI fails if either step was forgotten.
 
 ### Local database
 
@@ -347,7 +367,8 @@ src/
   AutoFlow.Domain/        entities, value objects, business rules (no dependencies)
   AutoFlow.Application/   use cases, repository contracts, Result/Error
   AutoFlow.Infrastructure/ EF Core + PostgreSQL: DbContext, mappings, repositories
-  AutoFlow.Api/           ASP.NET Core host, HTTP endpoints, error handling
+  AutoFlow.Api/           ASP.NET Core host, HTTP endpoints, authentication, error handling
+web/                      React + TypeScript client (Vite), API types generated from openapi.json
 tests/
   AutoFlow.Domain.Tests/        unit tests for domain rules
   AutoFlow.Application.Tests/   use-case tests against in-memory fakes
