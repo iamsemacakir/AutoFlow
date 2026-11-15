@@ -14,6 +14,7 @@ namespace AutoFlow.Application.Tests.Invoices;
 public class InvoiceHandlerTests
 {
     private static readonly DateTimeOffset Now = FixedTimeProvider.Default;
+    private static readonly string[] PaymentMethods = ["Cash", "BankTransfer", "Card"];
 
     private readonly InMemoryStore _store = new();
     private readonly Customer _customer;
@@ -139,7 +140,7 @@ public class InvoiceHandlerTests
         Assert.Equal((100m, 185.01m), (result.Value.AmountPaid, result.Value.Balance));
         var payment = Assert.Single(result.Value.Payments);
         Assert.Equal((100m, Now), (payment.Amount, payment.ReceivedAt));
-        Assert.Contains(payment.Method, new[] { "Cash", "BankTransfer", "Card" });
+        Assert.Contains(payment.Method, PaymentMethods);
         Assert.Equal(1, _store.SaveCount);
     }
 

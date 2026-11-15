@@ -35,15 +35,15 @@ public interface IAppointmentRepository
 
     /// <summary>
     /// The appointments in any bay whose slot overlaps the half-open period
-    /// [<paramref name="from"/>, <paramref name="to"/>), in every status except
+    /// [<paramref name="periodStart"/>, <paramref name="periodEnd"/>), in every status except
     /// <see cref="AppointmentStatus.Cancelled"/>, ordered by start: what a
     /// schedule of that period shows. An appointment that runs past either end
     /// of the period is included. The returned entities are read-only
     /// snapshots and are not tracked.
     /// </summary>
     Task<IReadOnlyList<Appointment>> ListOverlappingAsync(
-        DateTimeOffset from,
-        DateTimeOffset to,
+        DateTimeOffset periodStart,
+        DateTimeOffset periodEnd,
         CancellationToken cancellationToken = default);
 
     void Add(Appointment appointment);

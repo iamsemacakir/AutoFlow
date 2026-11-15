@@ -32,12 +32,12 @@ internal sealed class AppointmentRepository(AutoFlowDbContext db) : IAppointment
     }
 
     public async Task<IReadOnlyList<Appointment>> ListOverlappingAsync(
-        DateTimeOffset from,
-        DateTimeOffset to,
+        DateTimeOffset periodStart,
+        DateTimeOffset periodEnd,
         CancellationToken cancellationToken = default)
     {
-        var utcFrom = from.ToUniversalTime();
-        var utcTo = to.ToUniversalTime();
+        var utcFrom = periodStart.ToUniversalTime();
+        var utcTo = periodEnd.ToUniversalTime();
 
         // Half-open overlap, like AppointmentSlot.Overlaps.
         return await db.Appointments

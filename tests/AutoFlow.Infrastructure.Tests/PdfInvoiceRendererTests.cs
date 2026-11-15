@@ -135,7 +135,7 @@ public class PdfInvoiceRendererTests
         var pages = PageCount(pdf);
         Assert.Equal(3, pages);
         Assert.Contains($"/Count {pages} ", pdf, StringComparison.Ordinal);
-        Assert.Equal(pages, Regex.Matches(pdf, @"\(DESCRIPTION\) Tj").Count);
+        Assert.Equal(pages, Regex.Count(pdf, @"\(DESCRIPTION\) Tj"));
         Assert.Contains($"(Page {pages} of {pages}) Tj", pdf, StringComparison.Ordinal);
         Assert.Contains("(Position 100) Tj", pdf, StringComparison.Ordinal);
         KeepSample(document, "long");
@@ -212,7 +212,7 @@ public class PdfInvoiceRendererTests
         return Encoding.ASCII.GetString(document.Content.Span);
     }
 
-    private static int PageCount(string pdf) => Regex.Matches(pdf, @"/Type /Page ").Count;
+    private static int PageCount(string pdf) => Regex.Count(pdf, @"/Type /Page ");
 
     /// <summary>
     /// Set <c>AUTOFLOW_PDF_SAMPLE_DIR</c> to keep the rendered invoices, e.g.
