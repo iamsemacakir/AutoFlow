@@ -95,4 +95,4 @@ left out; each is one screen change with its tests.
 
 - [x] Reschedule an appointment from the day schedule (bay, day, start, length; starts from where it is)
 - [x] Transfer a vehicle to another customer from the vehicle page
-- [ ] Delete a customer from the customer page (refused with the API's reason while they have vehicles, work orders or appointments)
+- [x] Delete a customer from the customer page (refused with the API's reason while they have vehicles, work orders or appointments)

@@ -61,6 +61,7 @@ export function CustomerPage() {
               <dd>{formatDate(data.createdAt.slice(0, 10))}</dd>
             </dl>
           )}
+          {frontDesk && !editing && <DeleteCustomer customer={data} />}
         </Card>
         <Card
           title="Vehicles"
@@ -206,5 +207,53 @@ function RegisterVehicle({ customerId }: { customerId: string }) {
       </div>
       <ErrorMessage error={register.error} />
     </form>
+  );
+}
+
+/**
+ * Removes a customer after a second click. The API refuses while they still
+ * own vehicles or have work orders or appointments; its reason is shown.
+ */
+function DeleteCustomer({ customer }: { customer: CustomerDetails }) {
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const [confirming, setConfirming] = useState(false);
+  const remove = useMutation({
+    mutationFn: async () =>
+      unwrap(await api.DELETE("/api/customers/{id}", { params: { path: { id: customer.id } } })),
+    onSuccess: async () => {
+      queryClient.removeQueries({ queryKey: ["customer", customer.id] });
+      await queryClient.invalidateQueries({ queryKey: ["customers"] });
+      navigate("/customers");
+    },
+  });
+  const name = `${customer.firstName} ${customer.lastName}`;
+
+  return (
+    <>
+      <div className="actions">
+        {confirming ? (
+          <>
+            <button type="button" className="danger" onClick={() => remove.mutate()} disabled={remove.isPending}>
+              Delete {name} for good
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setConfirming(false);
+                remove.reset();
+              }}
+            >
+              Keep
+            </button>
+          </>
+        ) : (
+          <button type="button" className="link" onClick={() => setConfirming(true)}>
+            Delete customer
+          </button>
+        )}
+      </div>
+      <ErrorMessage error={remove.error} />
+    </>
   );
 }
