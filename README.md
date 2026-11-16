@@ -113,6 +113,11 @@ End-to-end tests (Playwright) drive the real stack: start it with
 `docker compose up --build`, then run `npx playwright install chromium`
 once and `npm run e2e` in `web/`. CI does the same on every push.
 
+The client remembers the `ETag` of every resource it loads and sends it as
+`If-Match` when it edits or deletes a customer or changes a work order; if a
+colleague got there first, it says so and shows their version instead of
+overwriting it.
+
 Sign in with an account of the API (see "Signing in" below). The client's
 API types are generated from `web/openapi.json`, a committed copy of the
 API's OpenAPI document: after changing the API's contract, run the API

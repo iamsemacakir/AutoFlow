@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { api, unwrap } from "../api/client";
+import { api, ifMatch, isStale, unwrap } from "../api/client";
 import type { CustomerDetails } from "../api/types";
 import { FRONT_DESK, useAuth } from "../auth/AuthContext";
 import { Card, Empty, ErrorMessage, Field, Loading, PageHeader } from "../components/ui";
@@ -120,12 +120,16 @@ function EditCustomer({ customer, onDone }: { customer: CustomerDetails; onDone:
         await api.PUT("/api/customers/{id}", {
           params: { path: { id: customer.id } },
           body: { ...form, phoneNumber: form.phoneNumber.trim() || null },
+          headers: ifMatch(`/api/customers/${customer.id}`),
         }),
       ),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["customer", customer.id] });
       onDone();
     },
+    // A colleague saved in the meantime: refresh what the page shows; the form keeps
+    // what was typed, and saving again (now against their version) is a deliberate choice.
+    onError: (error) => isStale(error) && queryClient.invalidateQueries({ queryKey: ["customer", customer.id] }),
   });
   const set = (key: keyof typeof form) => (e: { target: { value: string } }) => setForm({ ...form, [key]: e.target.value });
 
@@ -220,12 +224,18 @@ function DeleteCustomer({ customer }: { customer: CustomerDetails }) {
   const [confirming, setConfirming] = useState(false);
   const remove = useMutation({
     mutationFn: async () =>
-      unwrap(await api.DELETE("/api/customers/{id}", { params: { path: { id: customer.id } } })),
+      unwrap(
+        await api.DELETE("/api/customers/{id}", {
+          params: { path: { id: customer.id } },
+          headers: ifMatch(`/api/customers/${customer.id}`),
+        }),
+      ),
     onSuccess: async () => {
       queryClient.removeQueries({ queryKey: ["customer", customer.id] });
       await queryClient.invalidateQueries({ queryKey: ["customers"] });
       navigate("/customers");
     },
+    onError: (error) => isStale(error) && queryClient.invalidateQueries({ queryKey: ["customer", customer.id] }),
   });
   const name = `${customer.firstName} ${customer.lastName}`;
 

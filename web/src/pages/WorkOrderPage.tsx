@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { api, unwrap } from "../api/client";
+import { api, ifMatch, isStale, unwrap } from "../api/client";
 import type { WorkOrderDetails } from "../api/types";
 import { FRONT_DESK, useAuth } from "../auth/AuthContext";
 import { Card, Empty, ErrorMessage, Field, Loading, PageHeader, StatusBadge } from "../components/ui";
@@ -30,10 +30,14 @@ export function WorkOrderPage() {
   });
 
   const update = (next: WorkOrderDetails) => queryClient.setQueryData(["work-order", id], next);
+  // Someone changed the work order since it was loaded: show the current one instead.
+  const reloadIfStale = (error: unknown) =>
+    isStale(error) ? queryClient.invalidateQueries({ queryKey: ["work-order", id] }) : undefined;
+  const headers = () => ifMatch(`/api/work-orders/${id}`);
 
   const transition = useMutation({
     mutationFn: async (action: Transition) => {
-      const path = { params: { path: { id } } };
+      const path = { params: { path: { id } }, headers: headers() };
       switch (action) {
         case "approve":
           return unwrap(await api.POST("/api/work-orders/{id}/approve", path));
@@ -44,16 +48,23 @@ export function WorkOrderPage() {
       }
     },
     onSuccess: update,
+    onError: reloadIfStale,
   });
   const cancel = useMutation({
     mutationFn: async () =>
-      unwrap(await api.POST("/api/work-orders/{id}/cancel", { params: { path: { id } }, body: { reason } })),
+      unwrap(
+        await api.POST("/api/work-orders/{id}/cancel", { params: { path: { id } }, body: { reason }, headers: headers() }),
+      ),
     onSuccess: update,
+    onError: reloadIfStale,
   });
   const removeLine = useMutation({
     mutationFn: async (lineId: string) =>
-      unwrap(await api.DELETE("/api/work-orders/{id}/lines/{lineId}", { params: { path: { id, lineId } } })),
+      unwrap(
+        await api.DELETE("/api/work-orders/{id}/lines/{lineId}", { params: { path: { id, lineId } }, headers: headers() }),
+      ),
     onSuccess: update,
+    onError: reloadIfStale,
   });
   const issueInvoice = useMutation({
     mutationFn: async () =>

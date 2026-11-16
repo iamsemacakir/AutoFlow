@@ -100,5 +100,5 @@ left out; each is one screen change with its tests.
 ## Follow-ups — finishing touches
 
 - [x] `ETag` on every single resource and `If-Match` on every change (412 for a stale version, enforced again at commit time; ADR 0024)
-- [ ] The web client sends `If-Match` when editing what it loaded and offers to reload on 412
+- [x] The web client sends `If-Match` when editing or deleting a customer and when changing a work order, and shows the newer version on 412
 - [ ] License

@@ -91,4 +91,45 @@ describe("CustomerPage", () => {
     expect(await screen.findByRole("heading", { name: "Mia Wagner" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Delete customer" })).not.toBeInTheDocument();
   });
+
+  it("saves changes against the version it loaded and shows a colleague's newer version instead of overwriting it", async () => {
+    const id = "6f1c2b9e-0d4a-4c1e-9a53-1b2c3d4e5f60";
+    let stored = { ...customer, id, phoneNumber: "+49 30 1111" };
+    let version = 7;
+    const saves: (string | null)[] = [];
+    mockApi(async (request) => {
+      const path = pathOf(request);
+      if (path === `/api/customers/${id}/vehicles`) {
+        return json([]);
+      }
+      if (request.method === "PUT") {
+        saves.push(request.headers.get("If-Match"));
+        if (request.headers.get("If-Match") !== `"${version}"`) {
+          return json({ status: 412, code: "request.precondition_failed", title: "Precondition failed" }, 412);
+        }
+        stored = { ...stored, ...((await request.json()) as object) };
+        version += 1;
+        return json(stored, 200, { ETag: `"${version}"` });
+      }
+      return json(stored, 200, { ETag: `"${version}"` });
+    });
+    renderAt(
+      <Routes>
+        <Route path="/customers/:id" element={<CustomerPage />} />
+      </Routes>,
+      { role: "ServiceAdvisor", path: `/customers/${id}` },
+    );
+
+    await userEvent.click(await screen.findByRole("button", { name: "Edit details" }));
+    // A colleague changes the phone number while the form is open.
+    stored = { ...stored, phoneNumber: "+49 30 2222" };
+    version += 1;
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Someone else changed this in the meantime.");
+    expect(saves).toEqual(['"7"']);
+
+    await userEvent.click(screen.getByRole("button", { name: "Close" }));
+    expect(await screen.findByText("+49 30 2222")).toBeInTheDocument();
+  });
 });

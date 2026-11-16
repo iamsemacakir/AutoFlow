@@ -1,10 +1,10 @@
 import { vi } from "vitest";
 
 /** A JSON answer as the API sends it. */
-export function json(body: unknown, status = 200): Response {
+export function json(body: unknown, status = 200, headers: Record<string, string> = {}): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "Content-Type": status >= 400 ? "application/problem+json" : "application/json" },
+    headers: { "Content-Type": status >= 400 ? "application/problem+json" : "application/json", ...headers },
   });
 }
 

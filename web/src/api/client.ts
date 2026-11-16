@@ -36,7 +36,44 @@ const authentication: Middleware = {
   },
 };
 
+/**
+ * The last `ETag` the API sent per resource (`/api/customers/{id}`), from a
+ * read or a change. Sending it back as `If-Match` makes the API refuse a
+ * change with 412 when someone else changed the resource since this client
+ * loaded it, instead of overwriting their change (ADR 0024).
+ */
+const etags = new Map<string, string>();
+
+/** `/api/work-orders/{id}/approve` → `/api/work-orders/{id}`: the resource a tag belongs to. */
+export function resourceOf(path: string): string | null {
+  return /^\/api\/[a-z-]+\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i.exec(path)?.[0] ?? null;
+}
+
+const versions: Middleware = {
+  onResponse({ request, response }) {
+    const resource = resourceOf(new URL(request.url).pathname);
+    const etag = response.headers.get("ETag");
+    if (resource && etag && response.ok) {
+      etags.set(resource, etag);
+    }
+
+    return response;
+  },
+};
+
 api.use(authentication);
+api.use(versions);
+
+/** The `If-Match` header for a change to `resource`, if this client has seen a version of it. */
+export function ifMatch(resource: string): Record<string, string> {
+  const etag = etags.get(resource);
+  return etag ? { "If-Match": etag } : {};
+}
+
+/** Whether a change was refused because the resource changed since it was loaded. */
+export function isStale(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 412;
+}
 
 /**
  * The data of a successful answer, or an {@link ApiError} for an error

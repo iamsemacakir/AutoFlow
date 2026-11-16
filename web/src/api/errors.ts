@@ -47,6 +47,10 @@ function isFieldErrors(value: unknown): value is Record<string, string[]> {
 
 /** A message for any error a query or mutation can throw. */
 export function messageOf(error: unknown): string {
+  if (error instanceof ApiError && error.status === 412) {
+    return "Someone else changed this in the meantime. The page now shows their version; check it and try again.";
+  }
+
   if (error instanceof ApiError) {
     return error.message;
   }
