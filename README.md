@@ -435,4 +435,4 @@ docs/
 
 ## License
 
-Not yet licensed. All rights reserved by the repository owner until a license is added.
+Released under the [MIT License](LICENSE).

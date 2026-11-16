@@ -1,6 +1,7 @@
 {
   "name": "autoflow-web",
   "private": true,
+  "license": "MIT",
   "version": "1.0.0",
   "description": "AutoFlow web client: schedule, customers, vehicles, work orders and invoices for a car workshop",
   "type": "module",
