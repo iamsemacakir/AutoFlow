@@ -87,3 +87,12 @@ updated docs. Steps are done in order unless a dependency forces otherwise.
 - [x] CI green: .NET build and tests, web client checks, Docker images, end-to-end tests
 - [x] A seeded demo environment runnable with one command (`docker compose up --build`)
 - [x] README screenshots of the UI (taken by the end-to-end tests against the demo stack)
+
+## Follow-ups — web client coverage
+
+The API offers a few front-desk operations the first version of the client
+left out; each is one screen change with its tests.
+
+- [x] Reschedule an appointment from the day schedule (bay, day, start, length; starts from where it is)
+- [ ] Transfer a vehicle to another customer from the vehicle page
+- [ ] Delete a customer from the customer page (refused with the API's reason while they have vehicles, work orders or appointments)

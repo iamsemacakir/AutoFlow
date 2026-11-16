@@ -53,3 +53,30 @@ export function hourLabels(hours: { from: number; to: number } = VISIBLE_HOURS):
 function localTime(date: string, hour: number): number {
   return new Date(`${date}T${String(hour).padStart(2, "0")}:00:00`).getTime();
 }
+
+/** A booking form's time fields: a local day, a start time (`HH:MM`) and a length in hours. */
+export interface SlotFields {
+  date: string;
+  time: string;
+  hours: string;
+}
+
+/** The UTC start and end the API expects for a slot entered in the browser's time zone. */
+export function slotFrom({ date, time, hours }: SlotFields): { start: string; end: string } {
+  const start = new Date(`${date}T${time}:00`);
+  const end = new Date(start.getTime() + Number(hours) * 60 * 60 * 1000);
+  return { start: start.toISOString(), end: end.toISOString() };
+}
+
+/** The form fields that show an existing appointment's slot, so moving it starts from where it is. */
+export function slotFieldsOf(appointment: Pick<AppointmentDetails, "start" | "end">): SlotFields {
+  const start = new Date(appointment.start);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const hours = (new Date(appointment.end).getTime() - start.getTime()) / (60 * 60 * 1000);
+
+  return {
+    date: `${start.getFullYear()}-${pad(start.getMonth() + 1)}-${pad(start.getDate())}`,
+    time: `${pad(start.getHours())}:${pad(start.getMinutes())}`,
+    hours: String(hours),
+  };
+}

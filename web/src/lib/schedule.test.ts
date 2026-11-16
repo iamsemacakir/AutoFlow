@@ -1,4 +1,4 @@
-import { hourLabels, place } from "./schedule";
+import { hourLabels, place, slotFieldsOf, slotFrom } from "./schedule";
 
 const local = (time: string) => new Date(`2026-11-20T${time}:00`).toISOString();
 
@@ -32,5 +32,28 @@ describe("hourLabels", () => {
     expect(labels).toHaveLength(12);
     expect(labels[0]).toBe("07:00");
     expect(labels.at(-1)).toBe("18:00");
+  });
+});
+
+describe("slotFrom", () => {
+  it("turns a local day, start time and length into UTC instants", () => {
+    const slot = slotFrom({ date: "2026-11-20", time: "09:15", hours: "1.5" });
+
+    expect(slot).toEqual({ start: local("09:15"), end: local("10:45") });
+  });
+
+  it("measures the length in elapsed time when the clocks change", () => {
+    const slot = slotFrom({ date: "2026-03-29", time: "01:00", hours: "3" });
+
+    expect(new Date(slot.end).getTime() - new Date(slot.start).getTime()).toBe(3 * 60 * 60 * 1000);
+  });
+});
+
+describe("slotFieldsOf", () => {
+  it("shows an appointment's slot as the form fields it was booked with", () => {
+    const fields = slotFieldsOf({ start: local("14:30"), end: local("16:00") });
+
+    expect(fields).toEqual({ date: "2026-11-20", time: "14:30", hours: "1.5" });
+    expect(slotFrom(fields)).toEqual({ start: local("14:30"), end: local("16:00") });
   });
 });

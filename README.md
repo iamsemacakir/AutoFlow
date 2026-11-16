@@ -21,8 +21,9 @@ TypeScript** web client. One command starts it with a demo workshop.
 
 - **Schedule** — bays as the workshop's capacity, appointments on a
   15-minute grid, double booking prevented by the domain *and* by
-  PostgreSQL exclusion constraints, a time-zone-aware day view, check-in
-  that opens the work order.
+  PostgreSQL exclusion constraints, a time-zone-aware day view in which
+  appointments are moved between bays and times, check-in that opens the
+  work order.
 - **Customers and vehicles** — search, VIN and plate validation, odometer
   readings that never go backwards, ownership transfer with history.
 - **Work orders** — `Draft → Approved → InProgress → Completed → Invoiced`,

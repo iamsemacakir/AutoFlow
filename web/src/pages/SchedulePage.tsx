@@ -4,9 +4,9 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api, unwrap } from "../api/client";
 import type { AppointmentDetails } from "../api/types";
 import { FRONT_DESK, useAuth } from "../auth/AuthContext";
-import { Card, Empty, ErrorMessage, Loading, PageHeader, StatusBadge } from "../components/ui";
+import { Card, Empty, ErrorMessage, Field, Loading, PageHeader, StatusBadge } from "../components/ui";
 import { addDays, browserTimeZone, formatDate, formatTime, today } from "../lib/format";
-import { hourLabels, place } from "../lib/schedule";
+import { hourLabels, place, slotFieldsOf, slotFrom } from "../lib/schedule";
 
 /** The front desk's day: one row per bay, appointments as blocks on a 07:00–19:00 time line. */
 export function SchedulePage() {
@@ -97,16 +97,33 @@ export function SchedulePage() {
           )}
         </Card>
       )}
-      {selected && <AppointmentPanel appointment={selected} onClose={() => setSelected(null)} />}
+      {selected && (
+        <AppointmentPanel
+          key={selected.id}
+          appointment={selected}
+          onClose={() => setSelected(null)}
+          onMoved={(moved) => goTo(slotFieldsOf(moved).date)}
+        />
+      )}
     </>
   );
 }
 
-function AppointmentPanel({ appointment, onClose }: { appointment: AppointmentDetails; onClose: () => void }) {
+function AppointmentPanel({
+  appointment,
+  onClose,
+  onMoved,
+}: {
+  appointment: AppointmentDetails;
+  onClose: () => void;
+  /** Called with the appointment at its new place, after the schedule was refreshed. */
+  onMoved: (moved: AppointmentDetails) => void;
+}) {
   const { hasRole } = useAuth();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [reason, setReason] = useState("");
+  const [moving, setMoving] = useState(false);
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["schedule"] });
 
@@ -184,6 +201,9 @@ function AppointmentPanel({ appointment, onClose }: { appointment: AppointmentDe
           <button type="button" onClick={() => noShow.mutate()} disabled={noShow.isPending}>
             No-show
           </button>
+          <button type="button" onClick={() => setMoving(!moving)} aria-expanded={moving}>
+            {moving ? "Keep the time" : "Reschedule"}
+          </button>
           <input placeholder="Reason for cancelling" value={reason} onChange={(e) => setReason(e.target.value)} />
           <button type="button" className="danger" onClick={() => cancel.mutate()} disabled={!reason.trim() || cancel.isPending}>
             Cancel appointment
@@ -191,6 +211,75 @@ function AppointmentPanel({ appointment, onClose }: { appointment: AppointmentDe
         </div>
       )}
       <ErrorMessage error={checkIn.error ?? noShow.error ?? cancel.error} />
+      {canAct && moving && (
+        <RescheduleForm
+          appointment={appointment}
+          onMoved={async (moved) => {
+            await refresh();
+            onMoved(moved);
+          }}
+        />
+      )}
     </Card>
+  );
+}
+
+/** Moves a scheduled appointment to another time, another bay, or both; it starts from where the appointment is. */
+function RescheduleForm({
+  appointment,
+  onMoved,
+}: {
+  appointment: AppointmentDetails;
+  onMoved: (moved: AppointmentDetails) => Promise<void>;
+}) {
+  const bays = useQuery({ queryKey: ["bays"], queryFn: async () => unwrap(await api.GET("/api/bays")) });
+  const [form, setForm] = useState({ bayId: appointment.bayId, ...slotFieldsOf(appointment) });
+  const move = useMutation({
+    mutationFn: async () =>
+      unwrap(
+        await api.POST("/api/appointments/{id}/reschedule", {
+          params: { path: { id: appointment.id } },
+          body: { bayId: form.bayId, ...slotFrom(form) },
+        }),
+      ),
+    onSuccess: onMoved,
+  });
+  const set = (key: keyof typeof form) => (e: { target: { value: string } }) => setForm({ ...form, [key]: e.target.value });
+  const choices = bays.data?.filter((bay) => bay.isInService || bay.id === appointment.bayId) ?? [];
+
+  return (
+    <form
+      className="form-grid"
+      aria-label="Reschedule appointment"
+      onSubmit={(e) => {
+        e.preventDefault();
+        move.mutate();
+      }}
+    >
+      <Field label="Bay">
+        <select required value={form.bayId} onChange={set("bayId")}>
+          {choices.map((bay) => (
+            <option key={bay.id} value={bay.id}>
+              {bay.name}
+            </option>
+          ))}
+        </select>
+      </Field>
+      <Field label="Day">
+        <input type="date" required value={form.date} onChange={set("date")} />
+      </Field>
+      <Field label="Start" hint="Quarter hours: 08:00, 08:15, …">
+        <input type="time" step={900} required value={form.time} onChange={set("time")} />
+      </Field>
+      <Field label="Hours">
+        <input type="number" min={0.25} step={0.25} required value={form.hours} onChange={set("hours")} />
+      </Field>
+      <div className="actions">
+        <button type="submit" className="primary" disabled={move.isPending || bays.isPending}>
+          Move appointment
+        </button>
+      </div>
+      <ErrorMessage error={move.error ?? bays.error} />
+    </form>
   );
 }

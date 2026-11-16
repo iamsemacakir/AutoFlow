@@ -5,6 +5,7 @@ import { api, unwrap } from "../api/client";
 import { FRONT_DESK, useAuth } from "../auth/AuthContext";
 import { Card, Empty, ErrorMessage, Field, Loading, PageHeader, StatusBadge } from "../components/ui";
 import { formatDateTime, formatMoney, formatNumber, today } from "../lib/format";
+import { slotFrom } from "../lib/schedule";
 
 export function VehiclePage() {
   const { id = "" } = useParams();
@@ -167,16 +168,13 @@ function BookAppointment({ vehicleId }: { vehicleId: string }) {
   const bays = useQuery({ queryKey: ["bays"], queryFn: async () => unwrap(await api.GET("/api/bays")) });
   const [form, setForm] = useState({ bayId: "", date: today(), time: "09:00", hours: "1", purpose: "" });
   const book = useMutation({
-    mutationFn: async () => {
-      const start = new Date(`${form.date}T${form.time}:00`);
-      const end = new Date(start.getTime() + Number(form.hours) * 60 * 60 * 1000);
-      return unwrap(
+    mutationFn: async () =>
+      unwrap(
         await api.POST("/api/vehicles/{vehicleId}/appointments", {
           params: { path: { vehicleId } },
-          body: { bayId: form.bayId, start: start.toISOString(), end: end.toISOString(), purpose: form.purpose },
+          body: { bayId: form.bayId, ...slotFrom(form), purpose: form.purpose },
         }),
-      );
-    },
+      ),
     onSuccess: () => navigate(`/?date=${form.date}`),
   });
   const set = (key: keyof typeof form) => (e: { target: { value: string } }) => setForm({ ...form, [key]: e.target.value });
