@@ -4,6 +4,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, unwrap } from "../api/client";
 import { FRONT_DESK, useAuth } from "../auth/AuthContext";
 import { Card, Empty, ErrorMessage, Field, Loading, PageHeader, StatusBadge } from "../components/ui";
+import type { CustomerDetails } from "../api/types";
 import { formatDateTime, formatMoney, formatNumber, today } from "../lib/format";
 import { slotFrom } from "../lib/schedule";
 
@@ -88,6 +89,7 @@ export function VehiclePage() {
         {frontDesk && <OpenWorkOrder vehicleId={id} />}
       </div>
       {frontDesk && <BookAppointment vehicleId={id} />}
+      {frontDesk && <TransferVehicle vehicleId={id} ownerId={data.customerId} />}
       <Card title="Service history">
         <ErrorMessage error={history.error} />
         {history.data?.items.length === 0 && <Empty>No work orders yet.</Empty>}
@@ -218,6 +220,98 @@ function BookAppointment({ vehicleId }: { vehicleId: string }) {
         </div>
       </form>
       <ErrorMessage error={book.error ?? bays.error} />
+    </Card>
+  );
+}
+
+/** Hands the vehicle to another existing customer; its history and URL stay with it. */
+function TransferVehicle({ vehicleId, ownerId }: { vehicleId: string; ownerId: string }) {
+  const queryClient = useQueryClient();
+  const [text, setText] = useState("");
+  const [search, setSearch] = useState("");
+  const [newOwner, setNewOwner] = useState<CustomerDetails | null>(null);
+
+  const candidates = useQuery({
+    queryKey: ["customer-candidates", search],
+    queryFn: async () =>
+      unwrap(await api.GET("/api/customers", { params: { query: { search, page: 1, pageSize: 10 } } })),
+    enabled: search.length > 0,
+  });
+  const transfer = useMutation({
+    mutationFn: async (customer: CustomerDetails) =>
+      unwrap(
+        await api.POST("/api/vehicles/{id}/transfer", {
+          params: { path: { id: vehicleId } },
+          body: { customerId: customer.id },
+        }),
+      ),
+    onSuccess: async (_, customer) => {
+      setNewOwner(customer);
+      setText("");
+      setSearch("");
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["vehicle", vehicleId] }),
+        queryClient.invalidateQueries({ queryKey: ["customer-vehicles", ownerId] }),
+        queryClient.invalidateQueries({ queryKey: ["customer-vehicles", customer.id] }),
+      ]);
+    },
+  });
+  const others = candidates.data?.items.filter((customer) => customer.id !== ownerId) ?? [];
+
+  return (
+    <Card title="Change owner">
+      <form
+        className="inline-form"
+        role="search"
+        aria-label="Find the new owner"
+        onSubmit={(e) => {
+          e.preventDefault();
+          setNewOwner(null);
+          setSearch(text.trim());
+        }}
+      >
+        <input
+          type="search"
+          placeholder="Search the new owner by name, e-mail or phone"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          aria-label="New owner"
+        />
+        <button type="submit" disabled={!text.trim()}>
+          Find
+        </button>
+      </form>
+      {newOwner && (
+        <p role="status">
+          Now owned by{" "}
+          <Link to={`/customers/${newOwner.id}`}>
+            {newOwner.firstName} {newOwner.lastName}
+          </Link>
+          .
+        </p>
+      )}
+      {candidates.isFetching && <Loading label="Searching…" />}
+      {candidates.data && others.length === 0 && <Empty>No other customer matches.</Empty>}
+      {others.length > 0 && (
+        <table>
+          <tbody>
+            {others.map((customer) => (
+              <tr key={customer.id}>
+                <td>
+                  {customer.lastName}, {customer.firstName}
+                </td>
+                <td>{customer.email}</td>
+                <td className="number">
+                  <button type="button" onClick={() => transfer.mutate(customer)} disabled={transfer.isPending}>
+                    Transfer to {customer.firstName} {customer.lastName}
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      <ErrorMessage error={transfer.error ?? candidates.error} />
     </Card>
   );
 }
