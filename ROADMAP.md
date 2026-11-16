@@ -96,3 +96,9 @@ left out; each is one screen change with its tests.
 - [x] Reschedule an appointment from the day schedule (bay, day, start, length; starts from where it is)
 - [x] Transfer a vehicle to another customer from the vehicle page
 - [x] Delete a customer from the customer page (refused with the API's reason while they have vehicles, work orders or appointments)
+
+## Follow-ups — finishing touches
+
+- [x] `ETag` on every single resource and `If-Match` on every change (412 for a stale version, enforced again at commit time; ADR 0024)
+- [ ] The web client sends `If-Match` when editing what it loaded and offers to reload on 412
+- [ ] License

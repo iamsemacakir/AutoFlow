@@ -172,8 +172,8 @@ curl -s localhost:5080/api/auth/me -H "Authorization: Bearer $TOKEN"
 | `GET /api/users` | Staff accounts (owners only) | 200, 401, 403 |
 | `POST /api/users` | Open an account (`email`, `displayName`, `role`, `password`) | 201 + `Location`, 400, 401, 403, 409, 422 |
 | `GET /api/users/{id}` | One account | 200, 401, 403, 404 |
-| `PUT /api/users/{id}/role` | Change the role (`Owner`, `ServiceAdvisor`, `Mechanic`) | 200, 400, 401, 403, 404, 409 |
-| `POST /api/users/{id}/deactivate` / `reactivate` | Close or reopen an account; a closed account's tokens stop working at once | 200, 401, 403, 404, 409, 422 |
+| `PUT /api/users/{id}/role` | Change the role (`Owner`, `ServiceAdvisor`, `Mechanic`) | 200, 400, 401, 403, 404, 409, 412 |
+| `POST /api/users/{id}/deactivate` / `reactivate` | Close or reopen an account; a closed account's tokens stop working at once | 200, 401, 403, 404, 409, 412, 422 |
 
 Who may do what:
 
@@ -202,8 +202,22 @@ workshop always keeps an active owner.
 | `GET /api/customers?search=&page=1&pageSize=20` | List customers by name; every search term must match first name, last name, e-mail or phone | 200, 400 |
 | `GET /api/customers/{id}` | Get one customer | 200, 404 |
 | `POST /api/customers` | Register a customer (`firstName`, `lastName`, `email`, `phoneNumber?`) | 201 + `Location`, 400, 422 |
-| `PUT /api/customers/{id}` | Replace name and contact details | 200, 400, 404, 409, 422 |
-| `DELETE /api/customers/{id}` | Delete a customer who owns no vehicles and has no work orders or appointments | 204, 404, 409 |
+| `PUT /api/customers/{id}` | Replace name and contact details | 200, 400, 404, 409, 412, 422 |
+| `DELETE /api/customers/{id}` | Delete a customer who owns no vehicles and has no work orders or appointments | 204, 404, 409, 412 |
+
+Every single resource (`/api/customers/{id}`, `/api/vehicles/{id}`,
+`/api/work-orders/{id}`, `/api/bays/{id}`, `/api/appointments/{id}`,
+`/api/invoices/{id}`, `/api/users/{id}`) answers with its version as a strong
+`ETag`, also after a change. Send it back as `If-Match` with a change, and the
+API refuses with 412 `request.precondition_failed` if someone changed the
+resource since you loaded it, instead of overwriting their change; without
+`If-Match` a change applies to whatever is current (ADR 0024).
+
+```bash
+curl -si localhost:5080/api/customers/<customer-id> | grep -i etag    # ETag: "1234"
+curl -s -X PUT localhost:5080/api/customers/<customer-id> -H 'If-Match: "1234"' -H 'Content-Type: application/json' \
+  -d '{"firstName":"Anna","lastName":"Meyer","email":"anna@example.com"}'
+```
 
 `POST`/`PUT` bodies are validated first: missing, blank or overlong fields
 answer 400 with every field error at once; a well-formed request that breaks a
@@ -217,8 +231,8 @@ approving an empty work order) answers 422.
 | `GET /api/customers/{customerId}/vehicles` | List a customer's vehicles, oldest registration first | 200, 404 |
 | `POST /api/customers/{customerId}/vehicles` | Register a vehicle (`vin`, `licensePlate`, `make`, `model`, `modelYear`, `mileageKm`) | 201 + `Location`, 400, 404, 409, 422 |
 | `GET /api/vehicles/{id}` | Get one vehicle | 200, 404 |
-| `PUT /api/vehicles/{id}/mileage` | Record an odometer reading (`mileageKm`); readings never go backwards | 200, 400, 404, 409, 422 |
-| `POST /api/vehicles/{id}/transfer` | Transfer the vehicle to another customer (`customerId`) | 200, 400, 404, 409, 422 |
+| `PUT /api/vehicles/{id}/mileage` | Record an odometer reading (`mileageKm`); readings never go backwards | 200, 400, 404, 409, 412, 422 |
+| `POST /api/vehicles/{id}/transfer` | Transfer the vehicle to another customer (`customerId`) | 200, 400, 404, 409, 412, 422 |
 
 A VIN can be registered only once (`vehicle.duplicate_vin`, 409); a car that
 changes hands is transferred, and keeps its `/api/vehicles/{id}` URL.
@@ -239,13 +253,13 @@ curl -s -X PUT localhost:5080/api/vehicles/<vehicle-id>/mileage -H 'Content-Type
 | `GET /api/vehicles/{vehicleId}/work-orders?page=1&pageSize=20` | A vehicle's service history, newest first, including work orders of former owners | 200, 400, 404 |
 | `POST /api/vehicles/{vehicleId}/work-orders` | Open a draft for the vehicle's current owner (`complaint`, `mileageKm?`); a given reading is also recorded on the vehicle | 201 + `Location`, 400, 404, 409, 422 |
 | `GET /api/work-orders/{id}` | Get one work order with its lines and totals | 200, 404 |
-| `POST /api/work-orders/{id}/labour-lines` | Add labour (`description`, `hours`, `hourlyRate`) | 200, 400, 404, 409, 422 |
-| `POST /api/work-orders/{id}/part-lines` | Add a part (`partNumber?`, `description`, `quantity`, `unitPrice`) | 200, 400, 404, 409, 422 |
-| `DELETE /api/work-orders/{id}/lines/{lineId}` | Remove a line; the other lines keep their numbers | 200, 404, 409, 422 |
-| `POST /api/work-orders/{id}/approve` | The customer agrees to the estimate (draft with lines); the total is kept as `approvedTotal` | 200, 404, 409, 422 |
-| `POST /api/work-orders/{id}/start` | A mechanic starts work on an approved work order | 200, 404, 409, 422 |
-| `POST /api/work-orders/{id}/complete` | Work is done; the lines become final | 200, 404, 409, 422 |
-| `POST /api/work-orders/{id}/cancel` | Cancel a draft or approved work order (`reason`) | 200, 400, 404, 409, 422 |
+| `POST /api/work-orders/{id}/labour-lines` | Add labour (`description`, `hours`, `hourlyRate`) | 200, 400, 404, 409, 412, 422 |
+| `POST /api/work-orders/{id}/part-lines` | Add a part (`partNumber?`, `description`, `quantity`, `unitPrice`) | 200, 400, 404, 409, 412, 422 |
+| `DELETE /api/work-orders/{id}/lines/{lineId}` | Remove a line; the other lines keep their numbers | 200, 404, 409, 412, 422 |
+| `POST /api/work-orders/{id}/approve` | The customer agrees to the estimate (draft with lines); the total is kept as `approvedTotal` | 200, 404, 409, 412, 422 |
+| `POST /api/work-orders/{id}/start` | A mechanic starts work on an approved work order | 200, 404, 409, 412, 422 |
+| `POST /api/work-orders/{id}/complete` | Work is done; the lines become final | 200, 404, 409, 412, 422 |
+| `POST /api/work-orders/{id}/cancel` | Cancel a draft or approved work order (`reason`) | 200, 400, 404, 409, 412, 422 |
 
 Amounts are net, in the workshop's currency: quantities and hours have at
 most two decimals, prices are whole cents, and each line total is rounded half
@@ -273,9 +287,9 @@ curl -s -X POST localhost:5080/api/work-orders/<work-order-id>/approve
 | `GET /api/bays` | Every bay, in and out of service, ordered by name (unpaged) | 200 |
 | `POST /api/bays` | Add a bay, in service (`name`, unique) | 201 + `Location`, 400, 409, 422 |
 | `GET /api/bays/{id}` | Get one bay | 200, 404 |
-| `PUT /api/bays/{id}` | Rename a bay (`name`, unique) | 200, 400, 404, 409, 422 |
-| `POST /api/bays/{id}/take-out-of-service` | Stop new bookings (lift under repair); booked appointments stay until moved | 200, 404, 409, 422 |
-| `POST /api/bays/{id}/return-to-service` | Take bookings again | 200, 404, 409, 422 |
+| `PUT /api/bays/{id}` | Rename a bay (`name`, unique) | 200, 400, 404, 409, 412, 422 |
+| `POST /api/bays/{id}/take-out-of-service` | Stop new bookings (lift under repair); booked appointments stay until moved | 200, 404, 409, 412, 422 |
+| `POST /api/bays/{id}/return-to-service` | Take bookings again | 200, 404, 409, 412, 422 |
 
 A bay is the workshop's unit of capacity: one vehicle at a time. Names are
 compared after trimming; a name in use by another bay is `bay.duplicate_name`
@@ -292,10 +306,10 @@ curl -s -X POST localhost:5080/api/bays/<bay-id>/take-out-of-service
 | --- | --- | --- |
 | `POST /api/vehicles/{vehicleId}/appointments` | Book a bay for the vehicle's current owner (`bayId`, `start`, `end`, `purpose`) | 201 + `Location`, 400, 404, 409, 422 |
 | `GET /api/appointments/{id}` | Get one appointment, in any status | 200, 404 |
-| `POST /api/appointments/{id}/reschedule` | Move a scheduled appointment (`bayId` — the current one to change only the time —, `start`, `end`) | 200, 400, 404, 409, 422 |
-| `POST /api/appointments/{id}/check-in` | The vehicle has arrived: opens a draft work order (`mileageKm?`, `complaint?`, body optional) and answers with `appointment` and `workOrder` | 200, 400, 404, 409, 422 |
-| `POST /api/appointments/{id}/cancel` | Call off a scheduled appointment (`reason`); the slot is free again | 200, 400, 404, 409, 422 |
-| `POST /api/appointments/{id}/no-show` | The vehicle did not arrive; possible once the slot has begun | 200, 404, 409, 422 |
+| `POST /api/appointments/{id}/reschedule` | Move a scheduled appointment (`bayId` — the current one to change only the time —, `start`, `end`) | 200, 400, 404, 409, 412, 422 |
+| `POST /api/appointments/{id}/check-in` | The vehicle has arrived: opens a draft work order (`mileageKm?`, `complaint?`, body optional) and answers with `appointment` and `workOrder` | 200, 400, 404, 409, 412, 422 |
+| `POST /api/appointments/{id}/cancel` | Call off a scheduled appointment (`reason`); the slot is free again | 200, 400, 404, 409, 412, 422 |
+| `POST /api/appointments/{id}/no-show` | The vehicle did not arrive; possible once the slot has begun | 200, 404, 409, 412, 422 |
 | `GET /api/schedule?date=2026-11-20&timeZone=Europe/Berlin` | The day's plan: every bay by name with its appointments in start order (cancelled ones left out) | 200, 400 |
 
 `start` and `end` are ISO 8601 timestamps with an offset (`2026-11-20T09:00:00+01:00`)
@@ -337,7 +351,7 @@ curl -s localhost:5080/api/appointments/<appointment-id>/check-in -H 'Content-Ty
 | `GET /api/invoices?status=&customerId=&page=1&pageSize=20` | Invoices, newest number first; `status` is `Issued`, `PartiallyPaid` or `Paid` | 200, 400 |
 | `GET /api/invoices/{id}` | One invoice with lines, totals, payments, balance and `isOverdue` | 200, 404 |
 | `GET /api/invoices/{id}/pdf` | Download the invoice as `invoice-2026-00042.pdf` | 200, 404 |
-| `POST /api/invoices/{id}/payments` | Record money received (`amount`, `method`: `Cash`/`Card`/`BankTransfer`, `receivedAt?`) | 200, 400, 404, 409, 422 |
+| `POST /api/invoices/{id}/payments` | Record money received (`amount`, `method`: `Cash`/`Card`/`BankTransfer`, `receivedAt?`) | 200, 400, 404, 409, 412, 422 |
 
 An invoice is a snapshot of the work order, the customer's name and the
 vehicle at the time of issue and never changes afterwards. Line totals and
@@ -376,6 +390,7 @@ stable `code` to switch on:
 | 404 | `customer.not_found`, `vehicle.not_found`, `work_order.not_found`, `work_order.line_not_found`, `bay.not_found`, `appointment.not_found`, `invoice.not_found`, `invoice.not_issued`, `user.not_found` / `route.not_found` | unknown resource / unknown URL |
 | 405, 415 | `request.method_not_allowed`, `request.unsupported_media_type` | wrong method, non-JSON body |
 | 409 | `customer.has_vehicles`, `customer.has_work_orders`, `customer.has_appointments`, `vehicle.duplicate_vin`, `bay.duplicate_name`, `user.duplicate_email`, `user.last_owner`, `user.cannot_deactivate_self`, `appointment.bay_out_of_service`, `appointment.bay_already_booked`, `appointment.vehicle_already_booked`, `conflict.duplicate`, `conflict.concurrent_update` | conflicts |
+| 412 | `request.precondition_failed` (+ `currentETag`) | `If-Match` names a version that is no longer current |
 | 422 | `domain.rule_violated` | business rule broken |
 | 500 | `server.error` | unexpected failure (no details leaked) |
 

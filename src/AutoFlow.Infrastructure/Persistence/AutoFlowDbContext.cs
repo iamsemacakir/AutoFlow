@@ -34,9 +34,12 @@ public sealed class AutoFlowDbContext(DbContextOptions<AutoFlowDbContext> option
 
     public DbSet<User> Users => Set<User>();
 
+    private readonly Dictionary<(Type Type, Guid Id), uint> _expectedVersions = [];
+
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
     {
         TouchWorkOrdersWithChangedLines();
+        ApplyExpectedVersions();
         return base.SaveChanges(acceptAllChangesOnSuccess);
     }
 
@@ -45,7 +48,40 @@ public sealed class AutoFlowDbContext(DbContextOptions<AutoFlowDbContext> option
         CancellationToken cancellationToken = default)
     {
         TouchWorkOrdersWithChangedLines();
+        ApplyExpectedVersions();
         return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+    }
+
+    /// <summary>
+    /// Records the version a client's <c>If-Match</c> named for an aggregate
+    /// (see <see cref="RowVersions"/>). The next save compares against it
+    /// instead of the version the request happened to load.
+    /// </summary>
+    internal void ExpectVersion(Type aggregateType, Guid id, uint version) =>
+        _expectedVersions[(aggregateType, id)] = version;
+
+    /// <summary>
+    /// Makes EF Core issue <c>UPDATE … WHERE xmin = @expected</c> for every
+    /// aggregate with an expected version, so a change committed by another
+    /// request between the <c>If-Match</c> check and this save is a concurrency
+    /// conflict rather than a silently overwritten edit (ADR 0024).
+    /// </summary>
+    private void ApplyExpectedVersions()
+    {
+        if (_expectedVersions.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var entry in ChangeTracker.Entries())
+        {
+            if (entry.Entity is Domain.Common.Entity aggregate
+                && entry.State is EntityState.Modified or EntityState.Deleted
+                && _expectedVersions.TryGetValue((entry.Entity.GetType(), aggregate.Id), out var expected))
+            {
+                entry.Property(RowVersionExtensions.PropertyName).OriginalValue = expected;
+            }
+        }
     }
 
     /// <summary>

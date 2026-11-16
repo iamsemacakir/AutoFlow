@@ -1,4 +1,5 @@
 using AutoFlow.Api.Auth;
+using AutoFlow.Api.Concurrency;
 using AutoFlow.Api.Errors;
 using AutoFlow.Api.Validation;
 using AutoFlow.Application.Vehicles;
@@ -94,6 +95,7 @@ internal static class VehicleEndpoints
         var vehicles = app.MapGroup("/api/vehicles").WithTags("Vehicles").WithRequestValidation();
 
         vehicles.MapGet("/{id:guid}", GetVehicle)
+            .WithRowVersion<Vehicle>(readOnly: true)
             .WithName(GetVehicleRoute)
             .RequireAuthorization(Policies.Staff)
             .ProducesAuthProblems()
@@ -102,6 +104,7 @@ internal static class VehicleEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound);
 
         vehicles.MapPut("/{id:guid}/mileage", RecordMileage)
+            .WithRowVersion<Vehicle>()
             .WithName("RecordMileage")
             .RequireAuthorization(Policies.Staff)
             .ProducesAuthProblems()
@@ -113,6 +116,7 @@ internal static class VehicleEndpoints
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
 
         vehicles.MapPost("/{id:guid}/transfer", TransferVehicle)
+            .WithRowVersion<Vehicle>()
             .WithName("TransferVehicle")
             .RequireAuthorization(Policies.FrontDesk)
             .ProducesAuthProblems()

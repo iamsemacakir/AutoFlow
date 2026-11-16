@@ -1,4 +1,5 @@
 using AutoFlow.Api.Auth;
+using AutoFlow.Api.Concurrency;
 using AutoFlow.Api.Errors;
 using AutoFlow.Api.Observability;
 using AutoFlow.Api.Validation;
@@ -115,6 +116,7 @@ internal static class AppointmentEndpoints
         var appointments = app.MapGroup("/api/appointments").WithTags(Tag).WithRequestValidation();
 
         appointments.MapGet("/{id:guid}", GetAppointment)
+            .WithRowVersion<Appointment>(readOnly: true)
             .WithName(GetAppointmentRoute)
             .RequireAuthorization(Policies.Staff)
             .ProducesAuthProblems()
@@ -123,6 +125,7 @@ internal static class AppointmentEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound);
 
         appointments.MapPost("/{id:guid}/reschedule", RescheduleAppointment)
+            .WithRowVersion<Appointment>()
             .WithName("RescheduleAppointment")
             .RequireAuthorization(Policies.FrontDesk)
             .ProducesAuthProblems()
@@ -134,6 +137,7 @@ internal static class AppointmentEndpoints
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
 
         appointments.MapPost("/{id:guid}/check-in", CheckInAppointment)
+            .WithRowVersion<Appointment>()
             .WithName("CheckInAppointment")
             .RequireAuthorization(Policies.FrontDesk)
             .ProducesAuthProblems()
@@ -145,6 +149,7 @@ internal static class AppointmentEndpoints
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
 
         appointments.MapPost("/{id:guid}/cancel", CancelAppointment)
+            .WithRowVersion<Appointment>()
             .WithName("CancelAppointment")
             .RequireAuthorization(Policies.FrontDesk)
             .ProducesAuthProblems()
@@ -156,6 +161,7 @@ internal static class AppointmentEndpoints
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
 
         appointments.MapPost("/{id:guid}/no-show", MarkAppointmentNoShow)
+            .WithRowVersion<Appointment>()
             .WithName("MarkAppointmentNoShow")
             .RequireAuthorization(Policies.FrontDesk)
             .ProducesAuthProblems()

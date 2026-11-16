@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using AutoFlow.Api.Auth;
+using AutoFlow.Api.Concurrency;
 using AutoFlow.Api.Errors;
 using AutoFlow.Api.Validation;
 using AutoFlow.Application.Users;
@@ -62,6 +63,7 @@ internal static class UserEndpoints
             .ProducesAuthProblems();
 
         users.MapGet("/{id:guid}", GetUser)
+            .WithRowVersion<User>(readOnly: true)
             .WithName(GetUserRoute)
             .WithSummary("Gets a staff account.")
             .Produces<UserDetails>()
@@ -78,6 +80,7 @@ internal static class UserEndpoints
             .ProducesAuthProblems();
 
         users.MapPut("/{id:guid}/role", ChangeRole)
+            .WithRowVersion<User>()
             .WithName("ChangeUserRole")
             .WithSummary("Gives an account another role; the last active owner keeps theirs.")
             .Produces<UserDetails>()
@@ -87,6 +90,7 @@ internal static class UserEndpoints
             .ProducesAuthProblems();
 
         users.MapPost("/{id:guid}/deactivate", Deactivate)
+            .WithRowVersion<User>()
             .WithName("DeactivateUser")
             .WithSummary("Stops an account from signing in; its tokens stop working at once.")
             .Produces<UserDetails>()
@@ -96,6 +100,7 @@ internal static class UserEndpoints
             .ProducesAuthProblems();
 
         users.MapPost("/{id:guid}/reactivate", Reactivate)
+            .WithRowVersion<User>()
             .WithName("ReactivateUser")
             .WithSummary("Lets a deactivated account sign in again.")
             .Produces<UserDetails>()

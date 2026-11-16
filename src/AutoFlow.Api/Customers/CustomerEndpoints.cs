@@ -1,4 +1,5 @@
 using AutoFlow.Api.Auth;
+using AutoFlow.Api.Concurrency;
 using AutoFlow.Api.Errors;
 using AutoFlow.Api.Validation;
 using AutoFlow.Application.Common;
@@ -44,6 +45,7 @@ internal static class CustomerEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest);
 
         customers.MapGet("/{id:guid}", GetCustomer)
+            .WithRowVersion<Customer>(readOnly: true)
             .WithName(GetCustomerRoute)
             .RequireAuthorization(Policies.Staff)
             .ProducesAuthProblems()
@@ -61,6 +63,7 @@ internal static class CustomerEndpoints
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
 
         customers.MapPut("/{id:guid}", UpdateCustomer)
+            .WithRowVersion<Customer>()
             .WithName("UpdateCustomer")
             .RequireAuthorization(Policies.FrontDesk)
             .ProducesAuthProblems()
@@ -72,6 +75,7 @@ internal static class CustomerEndpoints
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
 
         customers.MapDelete("/{id:guid}", DeleteCustomer)
+            .WithRowVersion<Customer>()
             .WithName("DeleteCustomer")
             .RequireAuthorization(Policies.FrontDesk)
             .ProducesAuthProblems()

@@ -1,4 +1,5 @@
 using AutoFlow.Api.Auth;
+using AutoFlow.Api.Concurrency;
 using AutoFlow.Api.Errors;
 using AutoFlow.Api.Validation;
 using AutoFlow.Application.Bays;
@@ -42,6 +43,7 @@ internal static class BayEndpoints
             .Produces<IReadOnlyList<BayDetails>>();
 
         bays.MapGet("/{id:guid}", GetBay)
+            .WithRowVersion<Bay>(readOnly: true)
             .WithName(GetBayRoute)
             .RequireAuthorization(Policies.Staff)
             .ProducesAuthProblems()
@@ -60,6 +62,7 @@ internal static class BayEndpoints
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
 
         bays.MapPut("/{id:guid}", RenameBay)
+            .WithRowVersion<Bay>()
             .WithName("RenameBay")
             .RequireAuthorization(Policies.ManageWorkshop)
             .ProducesAuthProblems()
@@ -71,12 +74,14 @@ internal static class BayEndpoints
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
 
         MapAction(bays, "/{id:guid}/take-out-of-service", TakeBayOutOfService)
+            .WithRowVersion<Bay>()
             .WithName("TakeBayOutOfService")
             .RequireAuthorization(Policies.ManageWorkshop)
             .ProducesAuthProblems()
             .WithSummary("Stops new bookings for a bay; appointments already booked stay until moved.");
 
         MapAction(bays, "/{id:guid}/return-to-service", ReturnBayToService)
+            .WithRowVersion<Bay>()
             .WithName("ReturnBayToService")
             .RequireAuthorization(Policies.ManageWorkshop)
             .ProducesAuthProblems()

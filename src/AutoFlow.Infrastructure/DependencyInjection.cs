@@ -34,6 +34,7 @@ public static class DependencyInjection
         services.AddScoped<IAppointmentRepository, AppointmentRepository>();
         services.AddScoped<IInvoiceRepository, InvoiceRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IRowVersions, RowVersions>();
 
         services.AddSingleton<IInvoiceDocumentRenderer, PdfInvoiceRenderer>();
         services.AddSingleton<IPasswordHasher, Pbkdf2PasswordHasher>();

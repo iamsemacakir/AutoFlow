@@ -1,4 +1,5 @@
 using AutoFlow.Api.Auth;
+using AutoFlow.Api.Concurrency;
 using AutoFlow.Api.Errors;
 using AutoFlow.Api.Observability;
 using AutoFlow.Api.Validation;
@@ -110,6 +111,7 @@ internal static class WorkOrderEndpoints
         var workOrders = app.MapGroup("/api/work-orders").WithTags(Tag).WithRequestValidation();
 
         workOrders.MapGet("/{id:guid}", GetWorkOrder)
+            .WithRowVersion<WorkOrder>(readOnly: true)
             .WithName(GetWorkOrderRoute)
             .RequireAuthorization(Policies.Staff)
             .ProducesAuthProblems()
@@ -118,6 +120,7 @@ internal static class WorkOrderEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound);
 
         workOrders.MapPost("/{id:guid}/labour-lines", AddLabourLine)
+            .WithRowVersion<WorkOrder>()
             .WithName("AddLabourLine")
             .RequireAuthorization(Policies.Staff)
             .ProducesAuthProblems()
@@ -129,6 +132,7 @@ internal static class WorkOrderEndpoints
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
 
         workOrders.MapPost("/{id:guid}/part-lines", AddPartLine)
+            .WithRowVersion<WorkOrder>()
             .WithName("AddPartLine")
             .RequireAuthorization(Policies.Staff)
             .ProducesAuthProblems()
@@ -140,6 +144,7 @@ internal static class WorkOrderEndpoints
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
 
         workOrders.MapDelete("/{id:guid}/lines/{lineId:guid}", RemoveWorkOrderLine)
+            .WithRowVersion<WorkOrder>()
             .WithName("RemoveWorkOrderLine")
             .RequireAuthorization(Policies.Staff)
             .ProducesAuthProblems()
@@ -150,24 +155,28 @@ internal static class WorkOrderEndpoints
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
 
         MapTransition(workOrders, "/{id:guid}/approve", ApproveWorkOrder)
+            .WithRowVersion<WorkOrder>()
             .WithName("ApproveWorkOrder")
             .RequireAuthorization(Policies.FrontDesk)
             .ProducesAuthProblems()
             .WithSummary("The customer agrees to the estimate of a draft; its total becomes the approved total.");
 
         MapTransition(workOrders, "/{id:guid}/start", StartWorkOrder)
+            .WithRowVersion<WorkOrder>()
             .WithName("StartWorkOrder")
             .RequireAuthorization(Policies.Staff)
             .ProducesAuthProblems()
             .WithSummary("A mechanic starts work on an approved work order.");
 
         MapTransition(workOrders, "/{id:guid}/complete", CompleteWorkOrder)
+            .WithRowVersion<WorkOrder>()
             .WithName("CompleteWorkOrder")
             .RequireAuthorization(Policies.Staff)
             .ProducesAuthProblems()
             .WithSummary("Marks the work as done; from then on the lines are final.");
 
         MapTransition(workOrders, "/{id:guid}/cancel", CancelWorkOrder)
+            .WithRowVersion<WorkOrder>()
             .WithName("CancelWorkOrder")
             .RequireAuthorization(Policies.FrontDesk)
             .ProducesAuthProblems()

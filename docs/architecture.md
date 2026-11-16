@@ -277,6 +277,11 @@ authentication. Business rules do not live here.
   `AutoFlow` business meter (`AutoFlowMetrics`), exported over OTLP or to a
   Prometheus endpoint when configured; JSON console logs outside
   development. See [ADR 0023](adr/0023-containers-and-observability.md).
+- Conditional requests (`Concurrency/`): every `{id}` endpoint sends the
+  aggregate's version (`xmin`, read through `IRowVersions`) as `ETag`; a
+  change with a stale `If-Match` answers 412 before the use case runs, and
+  the checked version is enforced again at commit time. See
+  [ADR 0024](adr/0024-etags-and-conditional-requests.md).
 - `Program.cs` is the composition root: `AddApplication()` plus
   `AddInfrastructure(ConnectionStrings:AutoFlow)`. A missing connection string
   stops the host at startup instead of failing on the first request.

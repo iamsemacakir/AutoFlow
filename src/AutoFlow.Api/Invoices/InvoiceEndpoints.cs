@@ -1,4 +1,5 @@
 using AutoFlow.Api.Auth;
+using AutoFlow.Api.Concurrency;
 using AutoFlow.Api.Errors;
 using AutoFlow.Api.Observability;
 using AutoFlow.Api.Validation;
@@ -77,6 +78,7 @@ internal static class InvoiceEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest);
 
         invoices.MapGet("/{id:guid}", GetInvoice)
+            .WithRowVersion<Invoice>(readOnly: true)
             .WithName(GetInvoiceRoute)
             .RequireAuthorization(Policies.FrontDesk)
             .ProducesAuthProblems()
@@ -93,6 +95,7 @@ internal static class InvoiceEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound);
 
         invoices.MapPost("/{id:guid}/payments", RecordPayment)
+            .WithRowVersion<Invoice>()
             .WithName("RecordPayment")
             .RequireAuthorization(Policies.FrontDesk)
             .ProducesAuthProblems()

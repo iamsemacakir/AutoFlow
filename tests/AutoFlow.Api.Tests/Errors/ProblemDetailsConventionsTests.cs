@@ -39,6 +39,7 @@ public sealed class ProblemDetailsConventionsTests
     [InlineData(403, ProblemCodes.Forbidden)]
     [InlineData(404, ProblemCodes.RouteNotFound)]
     [InlineData(405, ProblemCodes.MethodNotAllowed)]
+    [InlineData(412, ProblemCodes.PreconditionFailed)]
     [InlineData(415, ProblemCodes.UnsupportedMediaType)]
     [InlineData(422, ProblemCodes.BusinessRuleViolated)]
     [InlineData(503, ProblemCodes.ServerError)]

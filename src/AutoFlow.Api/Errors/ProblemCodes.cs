@@ -17,6 +17,7 @@ public static class ProblemCodes
     public const string BusinessRuleViolated = "domain.rule_violated";
     public const string ServerError = "server.error";
     public const string RequestFailed = "request.failed";
+    public const string PreconditionFailed = "request.precondition_failed";
 
     /// <summary>The code used when a problem is written without one, chosen by status.</summary>
     public static string ForStatus(int status) => status switch
@@ -26,6 +27,7 @@ public static class ProblemCodes
         StatusCodes.Status403Forbidden => Forbidden,
         StatusCodes.Status404NotFound => RouteNotFound,
         StatusCodes.Status405MethodNotAllowed => MethodNotAllowed,
+        StatusCodes.Status412PreconditionFailed => PreconditionFailed,
         StatusCodes.Status415UnsupportedMediaType => UnsupportedMediaType,
         StatusCodes.Status422UnprocessableEntity => BusinessRuleViolated,
         >= 500 => ServerError,
