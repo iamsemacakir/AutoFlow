@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { api, download, unwrap } from "../api/client";
+import { api, download, ifMatch, isStale, unwrap } from "../api/client";
 import { Card, ErrorMessage, Field, Loading, PageHeader, StatusBadge } from "../components/ui";
 import { formatDate, formatDateTime, formatMoney, formatNumber, humanize } from "../lib/format";
 
@@ -22,12 +22,16 @@ export function InvoicePage() {
         await api.POST("/api/invoices/{id}/payments", {
           params: { path: { id } },
           body: { amount: Number(amount), method, receivedAt: null },
+          headers: ifMatch(`/api/invoices/${id}`),
         }),
       ),
     onSuccess: (next) => {
       setAmount("");
       queryClient.setQueryData(["invoice", id], next);
     },
+    // A colleague recorded a payment in the meantime: show the balance as it is now
+    // rather than taking the same money twice; the typed amount stays in the field.
+    onError: (error) => isStale(error) && queryClient.invalidateQueries({ queryKey: ["invoice", id] }),
   });
 
   if (invoice.isPending) {

@@ -110,4 +110,5 @@ front-desk changes get the same protection, one page at a time.
 
 - [x] Vehicle page: record mileage and transfer with `If-Match`; on 412 show the current vehicle (owner, reading)
 - [x] Day schedule: load the opened appointment for its version; check in, no-show, cancel and reschedule with `If-Match`
-- [ ] Bays and invoice payments with `If-Match`
+- [x] Invoice page: record a payment with `If-Match`; on 412 show the current balance instead of taking the money twice
+- [ ] Bays page: rename and take out of / return to service with `If-Match` (the list carries no versions, so load the bay first)
