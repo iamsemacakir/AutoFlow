@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { api, unwrap } from "../api/client";
+import { api, ifMatch, isStale, unwrap } from "../api/client";
 import type { AppointmentDetails } from "../api/types";
 import { FRONT_DESK, useAuth } from "../auth/AuthContext";
 import { Card, Empty, ErrorMessage, Field, Loading, PageHeader, StatusBadge } from "../components/ui";
@@ -109,8 +109,14 @@ export function SchedulePage() {
   );
 }
 
+/**
+ * One appointment with the front desk's actions. The schedule is a list and
+ * carries no versions (ADR 0024), so the panel loads the appointment itself:
+ * that shows its current state and gives the version the actions send as
+ * `If-Match`. Until it has arrived, the actions wait.
+ */
 function AppointmentPanel({
-  appointment,
+  appointment: listed,
   onClose,
   onMoved,
 }: {
@@ -125,33 +131,63 @@ function AppointmentPanel({
   const [reason, setReason] = useState("");
   const [moving, setMoving] = useState(false);
 
-  const refresh = () => queryClient.invalidateQueries({ queryKey: ["schedule"] });
+  const current = useQuery({
+    queryKey: ["appointment", listed.id],
+    queryFn: async () => unwrap(await api.GET("/api/appointments/{id}", { params: { path: { id: listed.id } } })),
+    placeholderData: listed,
+  });
+  const appointment = current.data ?? listed;
+  const loaded = !current.isPlaceholderData && current.isSuccess;
+  const headers = () => ifMatch(`/api/appointments/${appointment.id}`);
+
+  const refresh = () =>
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["schedule"] }),
+      queryClient.invalidateQueries({ queryKey: ["appointment", appointment.id] }),
+    ]);
+  // A colleague changed the appointment since it was opened: show it as it is now.
+  const reloadIfStale = (error: unknown) => (isStale(error) ? refresh() : undefined);
 
   const checkIn = useMutation({
     mutationFn: async () =>
-      unwrap(await api.POST("/api/appointments/{id}/check-in", { params: { path: { id: appointment.id } }, body: { mileageKm: null, complaint: null } })),
+      unwrap(
+        await api.POST("/api/appointments/{id}/check-in", {
+          params: { path: { id: appointment.id } },
+          body: { mileageKm: null, complaint: null },
+          headers: headers(),
+        }),
+      ),
     onSuccess: async (result) => {
       await refresh();
       navigate(`/work-orders/${result.workOrder.id}`);
     },
+    onError: reloadIfStale,
   });
   const cancel = useMutation({
     mutationFn: async () =>
       unwrap(
-        await api.POST("/api/appointments/{id}/cancel", { params: { path: { id: appointment.id } }, body: { reason } }),
+        await api.POST("/api/appointments/{id}/cancel", {
+          params: { path: { id: appointment.id } },
+          body: { reason },
+          headers: headers(),
+        }),
       ),
     onSuccess: async () => {
       await refresh();
       onClose();
     },
+    onError: reloadIfStale,
   });
   const noShow = useMutation({
     mutationFn: async () =>
-      unwrap(await api.POST("/api/appointments/{id}/no-show", { params: { path: { id: appointment.id } } })),
+      unwrap(
+        await api.POST("/api/appointments/{id}/no-show", { params: { path: { id: appointment.id } }, headers: headers() }),
+      ),
     onSuccess: async () => {
       await refresh();
       onClose();
     },
+    onError: reloadIfStale,
   });
 
   const canAct = appointment.status === "Scheduled" && hasRole(...FRONT_DESK);
@@ -195,25 +231,26 @@ function AppointmentPanel({
       </dl>
       {canAct && (
         <div className="actions">
-          <button type="button" className="primary" onClick={() => checkIn.mutate()} disabled={checkIn.isPending}>
+          <button type="button" className="primary" onClick={() => checkIn.mutate()} disabled={!loaded || checkIn.isPending}>
             Check in
           </button>
-          <button type="button" onClick={() => noShow.mutate()} disabled={noShow.isPending}>
+          <button type="button" onClick={() => noShow.mutate()} disabled={!loaded || noShow.isPending}>
             No-show
           </button>
-          <button type="button" onClick={() => setMoving(!moving)} aria-expanded={moving}>
+          <button type="button" onClick={() => setMoving(!moving)} aria-expanded={moving} disabled={!loaded}>
             {moving ? "Keep the time" : "Reschedule"}
           </button>
           <input placeholder="Reason for cancelling" value={reason} onChange={(e) => setReason(e.target.value)} />
-          <button type="button" className="danger" onClick={() => cancel.mutate()} disabled={!reason.trim() || cancel.isPending}>
+          <button type="button" className="danger" onClick={() => cancel.mutate()} disabled={!loaded || !reason.trim() || cancel.isPending}>
             Cancel appointment
           </button>
         </div>
       )}
-      <ErrorMessage error={checkIn.error ?? noShow.error ?? cancel.error} />
-      {canAct && moving && (
+      <ErrorMessage error={checkIn.error ?? noShow.error ?? cancel.error ?? current.error} />
+      {canAct && moving && loaded && (
         <RescheduleForm
           appointment={appointment}
+          onStale={reloadIfStale}
           onMoved={async (moved) => {
             await refresh();
             onMoved(moved);
@@ -228,9 +265,12 @@ function AppointmentPanel({
 function RescheduleForm({
   appointment,
   onMoved,
+  onStale,
 }: {
   appointment: AppointmentDetails;
   onMoved: (moved: AppointmentDetails) => Promise<void>;
+  /** Called with a failed move's error, so a 412 reloads what the panel shows. */
+  onStale: (error: unknown) => unknown;
 }) {
   const bays = useQuery({ queryKey: ["bays"], queryFn: async () => unwrap(await api.GET("/api/bays")) });
   const [form, setForm] = useState({ bayId: appointment.bayId, ...slotFieldsOf(appointment) });
@@ -240,9 +280,11 @@ function RescheduleForm({
         await api.POST("/api/appointments/{id}/reschedule", {
           params: { path: { id: appointment.id } },
           body: { bayId: form.bayId, ...slotFrom(form) },
+          headers: ifMatch(`/api/appointments/${appointment.id}`),
         }),
       ),
     onSuccess: onMoved,
+    onError: onStale,
   });
   const set = (key: keyof typeof form) => (e: { target: { value: string } }) => setForm({ ...form, [key]: e.target.value });
   const choices = bays.data?.filter((bay) => bay.isInService || bay.id === appointment.bayId) ?? [];

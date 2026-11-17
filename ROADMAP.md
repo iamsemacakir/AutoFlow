@@ -109,5 +109,5 @@ The first `If-Match` step covered customers and work orders; the other
 front-desk changes get the same protection, one page at a time.
 
 - [x] Vehicle page: record mileage and transfer with `If-Match`; on 412 show the current vehicle (owner, reading)
-- [ ] Day schedule: load the opened appointment for its version; check in, no-show, cancel and reschedule with `If-Match`
+- [x] Day schedule: load the opened appointment for its version; check in, no-show, cancel and reschedule with `If-Match`
 - [ ] Bays and invoice payments with `If-Match`

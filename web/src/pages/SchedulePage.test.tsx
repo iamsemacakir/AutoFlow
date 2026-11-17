@@ -1,6 +1,7 @@
-import { screen, within } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { json, mockApi, pathOf } from "../test/http";
+import type { AppointmentDetails } from "../api/types";
 import { renderAt } from "../test/render";
 import { SchedulePage } from "./SchedulePage";
 
@@ -41,9 +42,25 @@ const schedule = {
   ],
 };
 
+const listed = schedule.bays[0]!.appointments[0]!;
+
+/** Answers like the API: the opened appointment on its own, everything else through `handler` (the schedule by default). */
+function scheduleApi(handler: (request: Request) => Response | Promise<Response> = () => json(schedule)) {
+  return mockApi((request) =>
+    request.method === "GET" && pathOf(request) === "/api/appointments/appointment-1" ? json(listed) : handler(request),
+  );
+}
+
+/** A button once it can be used: the panel's actions wait for the appointment's version. */
+async function enabledButton(name: string) {
+  const button = await screen.findByRole("button", { name });
+  await waitFor(() => expect(button).toBeEnabled());
+  return button;
+}
+
 describe("SchedulePage", () => {
   it("asks for the chosen day in the browser's time zone and draws each bay's appointments", async () => {
-    const fetchMock = mockApi(() => json(schedule));
+    const fetchMock = scheduleApi();
     renderAt(<SchedulePage />, { role: "ServiceAdvisor", path: "/?date=2026-11-20" });
 
     const block = await screen.findByRole("button", { name: /Annual service/ });
@@ -56,17 +73,17 @@ describe("SchedulePage", () => {
   });
 
   it("opens an appointment with the front desk's actions", async () => {
-    mockApi(() => json(schedule));
+    scheduleApi();
     renderAt(<SchedulePage />, { role: "ServiceAdvisor", path: "/?date=2026-11-20" });
 
     await userEvent.click(await screen.findByRole("button", { name: /Annual service/ }));
 
-    expect(screen.getByRole("button", { name: "Check in" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Check in" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "Cancel appointment" })).toBeDisabled();
   });
 
   it("shows mechanics the plan without the front desk's actions", async () => {
-    mockApi(() => json(schedule));
+    scheduleApi();
     renderAt(<SchedulePage />, { role: "Mechanic", path: "/?date=2026-11-20" });
 
     await userEvent.click(await screen.findByRole("button", { name: /Annual service/ }));
@@ -81,7 +98,7 @@ describe("SchedulePage", () => {
       { id: "bay-3", name: "Lift 3", isInService: true, createdAt: "2026-11-01T08:00:00Z" },
     ];
     const moves: unknown[] = [];
-    const fetchMock = mockApi(async (request) => {
+    const fetchMock = scheduleApi(async (request) => {
       const path = pathOf(request);
       if (path === "/api/bays") {
         return json(bays);
@@ -96,7 +113,7 @@ describe("SchedulePage", () => {
     renderAt(<SchedulePage />, { role: "ServiceAdvisor", path: "/?date=2026-11-20" });
 
     await userEvent.click(await screen.findByRole("button", { name: /Annual service/ }));
-    await userEvent.click(screen.getByRole("button", { name: "Reschedule" }));
+    await userEvent.click(await enabledButton("Reschedule"));
     const form = within(screen.getByRole("form", { name: "Reschedule appointment" }));
 
     expect(form.getByLabelText("Day")).toHaveValue("2026-11-20");
@@ -118,7 +135,7 @@ describe("SchedulePage", () => {
   });
 
   it("shows why the API refused a move", async () => {
-    mockApi((request) => {
+    scheduleApi((request) => {
       const path = pathOf(request);
       if (path === "/api/bays") {
         return json([schedule.bays[0]!.bay]);
@@ -131,11 +148,86 @@ describe("SchedulePage", () => {
     renderAt(<SchedulePage />, { role: "Owner", path: "/?date=2026-11-20" });
 
     await userEvent.click(await screen.findByRole("button", { name: /Annual service/ }));
-    await userEvent.click(screen.getByRole("button", { name: "Reschedule" }));
+    await userEvent.click(await enabledButton("Reschedule"));
     await screen.findByRole("option", { name: "Lift 1" });
     await userEvent.click(screen.getByRole("button", { name: "Move appointment" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("The bay is already booked at that time.");
     expect(screen.getByRole("form", { name: "Reschedule appointment" })).toBeInTheDocument();
+  });
+
+  describe("against the version it loaded", () => {
+    const id = "7c2e9a41-6d3b-4f8e-a1c5-2b9d8e7f6a03";
+    const opened: AppointmentDetails = { ...listed, id };
+
+    /** The appointment as the API keeps it; the test changes it as a colleague would. Records each change's `If-Match`. */
+    function versionedApi() {
+      const state = { stored: opened as AppointmentDetails, version: 5, changes: [] as (string | null)[], reads: 0 };
+      mockApi(async (request) => {
+        const path = pathOf(request);
+        if (path === `/api/appointments/${id}`) {
+          state.reads += 1;
+          return json(state.stored, 200, { ETag: `"${state.version}"` });
+        }
+        if (path.startsWith(`/api/appointments/${id}/`)) {
+          state.changes.push(request.headers.get("If-Match"));
+          if (request.headers.get("If-Match") !== `"${state.version}"`) {
+            return json({ status: 412, code: "request.precondition_failed", title: "Precondition failed" }, 412);
+          }
+          state.stored = path.endsWith("/no-show")
+            ? { ...state.stored, status: "NoShow", noShowAt: "2026-11-20T10:00:00Z" }
+            : { ...state.stored, rescheduledAt: "2026-11-17T08:00:00Z" };
+          state.version += 1;
+          return json(state.stored, 200, { ETag: `"${state.version}"` });
+        }
+        if (path === "/api/bays") {
+          return json(schedule.bays.map(({ bay }) => bay));
+        }
+        return json({ ...schedule, bays: [{ ...schedule.bays[0]!, appointments: [state.stored] }, schedule.bays[1]!] });
+      });
+      return state;
+    }
+
+    it("loads the opened appointment and sends its version with an action", async () => {
+      const api = versionedApi();
+      renderAt(<SchedulePage />, { role: "ServiceAdvisor", path: "/?date=2026-11-20" });
+
+      await userEvent.click(await screen.findByRole("button", { name: /Annual service/ }));
+      await userEvent.click(await enabledButton("No-show"));
+
+      await waitFor(() => expect(screen.queryByRole("button", { name: "No-show" })).not.toBeInTheDocument());
+      expect(api.changes).toEqual(['"5"']);
+      expect(api.reads).toBeGreaterThan(0);
+    });
+
+    it("refuses to act on an appointment a colleague changed in the meantime and shows it as it is now", async () => {
+      const api = versionedApi();
+      renderAt(<SchedulePage />, { role: "ServiceAdvisor", path: "/?date=2026-11-20" });
+
+      await userEvent.click(await screen.findByRole("button", { name: /Annual service/ }));
+      const noShow = await enabledButton("No-show");
+      // A colleague checks the vehicle in while the panel is open.
+      api.stored = { ...api.stored, status: "CheckedIn", checkedInAt: "2026-11-20T08:55:00Z", workOrderId: "work-order-9" };
+      api.version += 1;
+
+      await userEvent.click(noShow);
+
+      expect(await screen.findByRole("alert")).toHaveTextContent("Someone else changed this in the meantime.");
+      expect(api.changes).toEqual(['"5"']);
+      expect(await screen.findByRole("link", { name: "Open work order" })).toHaveAttribute("href", "/work-orders/work-order-9");
+      expect(screen.queryByRole("button", { name: "Check in" })).not.toBeInTheDocument();
+    });
+
+    it("moves an appointment with its version", async () => {
+      const api = versionedApi();
+      renderAt(<SchedulePage />, { role: "Owner", path: "/?date=2026-11-20" });
+
+      await userEvent.click(await screen.findByRole("button", { name: /Annual service/ }));
+      await userEvent.click(await enabledButton("Reschedule"));
+      await screen.findByRole("option", { name: "Lift 1" });
+      await userEvent.click(screen.getByRole("button", { name: "Move appointment" }));
+
+      await waitFor(() => expect(api.changes).toEqual(['"5"']));
+    });
   });
 });
