@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { api, unwrap } from "../api/client";
+import { api, ifMatch, isStale, unwrap } from "../api/client";
 import { FRONT_DESK, useAuth } from "../auth/AuthContext";
 import { Card, Empty, ErrorMessage, Field, Loading, PageHeader, StatusBadge } from "../components/ui";
 import type { CustomerDetails } from "../api/types";
@@ -31,12 +31,18 @@ export function VehiclePage() {
   const recordMileage = useMutation({
     mutationFn: async () =>
       unwrap(
-        await api.PUT("/api/vehicles/{id}/mileage", { params: { path: { id } }, body: { mileageKm: Number(mileage) } }),
+        await api.PUT("/api/vehicles/{id}/mileage", {
+          params: { path: { id } },
+          body: { mileageKm: Number(mileage) },
+          headers: ifMatch(`/api/vehicles/${id}`),
+        }),
       ),
     onSuccess: async () => {
       setMileage("");
       await queryClient.invalidateQueries({ queryKey: ["vehicle", id] });
     },
+    // A colleague changed the vehicle in the meantime: show their version; the reading stays in the field.
+    onError: (error) => isStale(error) && queryClient.invalidateQueries({ queryKey: ["vehicle", id] }),
   });
 
   if (vehicle.isPending) {
@@ -243,6 +249,7 @@ function TransferVehicle({ vehicleId, ownerId }: { vehicleId: string; ownerId: s
         await api.POST("/api/vehicles/{id}/transfer", {
           params: { path: { id: vehicleId } },
           body: { customerId: customer.id },
+          headers: ifMatch(`/api/vehicles/${vehicleId}`),
         }),
       ),
     onSuccess: async (_, customer) => {
@@ -255,6 +262,8 @@ function TransferVehicle({ vehicleId, ownerId }: { vehicleId: string; ownerId: s
         queryClient.invalidateQueries({ queryKey: ["customer-vehicles", customer.id] }),
       ]);
     },
+    // Someone else changed the vehicle (perhaps already transferred it): show who owns it now.
+    onError: (error) => isStale(error) && queryClient.invalidateQueries({ queryKey: ["vehicle", vehicleId] }),
   });
   const others = candidates.data?.items.filter((customer) => customer.id !== ownerId) ?? [];
 

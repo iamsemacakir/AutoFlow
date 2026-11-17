@@ -102,3 +102,12 @@ left out; each is one screen change with its tests.
 - [x] `ETag` on every single resource and `If-Match` on every change (412 for a stale version, enforced again at commit time; ADR 0024)
 - [x] The web client sends `If-Match` when editing or deleting a customer and when changing a work order, and shows the newer version on 412
 - [x] License (MIT)
+
+## Follow-ups — conditional changes in the web client
+
+The first `If-Match` step covered customers and work orders; the other
+front-desk changes get the same protection, one page at a time.
+
+- [x] Vehicle page: record mileage and transfer with `If-Match`; on 412 show the current vehicle (owner, reading)
+- [ ] Day schedule: load the opened appointment for its version; check in, no-show, cancel and reschedule with `If-Match`
+- [ ] Bays and invoice payments with `If-Match`

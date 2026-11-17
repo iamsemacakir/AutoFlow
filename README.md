@@ -114,7 +114,8 @@ End-to-end tests (Playwright) drive the real stack: start it with
 once and `npm run e2e` in `web/`. CI does the same on every push.
 
 The client remembers the `ETag` of every resource it loads and sends it as
-`If-Match` when it edits or deletes a customer or changes a work order; if a
+`If-Match` when it edits or deletes a customer, records a vehicle's mileage
+or transfers it, or changes a work order; if a
 colleague got there first, it says so and shows their version instead of
 overwriting it.
 

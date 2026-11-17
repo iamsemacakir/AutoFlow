@@ -1,4 +1,4 @@
-import { screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Route, Routes } from "react-router-dom";
 import { json, mockApi, pathOf } from "../test/http";
@@ -100,6 +100,85 @@ describe("VehiclePage", () => {
     await userEvent.click(await screen.findByRole("button", { name: "Transfer to Jonas Wagner" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Customer not found.");
+  });
+
+  describe("against the version it loaded", () => {
+    const id = "3a9d1c7e-5b2f-4e8a-9c1d-7e6f5a4b3c21";
+    const path = `/api/vehicles/${id}`;
+
+    /** A vehicle whose version the test can bump, as if a colleague changed it; records each change's `If-Match`. */
+    function versionedVehicleApi() {
+      const state = { stored: { ...vehicle, id }, version: 3, changes: [] as (string | null)[] };
+      mockApi(async (request) => {
+        const requestPath = pathOf(request);
+        if (requestPath === `${path}/mileage` || requestPath === `${path}/transfer`) {
+          state.changes.push(request.headers.get("If-Match"));
+          if (request.headers.get("If-Match") !== `"${state.version}"`) {
+            return json({ status: 412, code: "request.precondition_failed", title: "Precondition failed" }, 412);
+          }
+          state.stored = { ...state.stored, ...((await request.json()) as object) };
+          state.version += 1;
+          return json(state.stored, 200, { ETag: `"${state.version}"` });
+        }
+        if (requestPath === path) {
+          return json(state.stored, 200, { ETag: `"${state.version}"` });
+        }
+        if (requestPath.startsWith("/api/customers?")) {
+          return json({ items: [owner, buyer], page: 1, pageSize: 10, totalCount: 2, totalPages: 1 });
+        }
+        if (requestPath === "/api/bays") {
+          return json([]);
+        }
+        return json({ items: [], page: 1, pageSize: 50, totalCount: 0, totalPages: 0 });
+      });
+      renderAt(
+        <Routes>
+          <Route path="/vehicles/:id" element={<VehiclePage />} />
+        </Routes>,
+        { role: "ServiceAdvisor", path: `/vehicles/${id}` },
+      );
+      return state;
+    }
+
+    it("records mileage with If-Match and shows a colleague's newer reading instead of overwriting it", async () => {
+      const api = versionedVehicleApi();
+      await userEvent.type(await screen.findByLabelText("Odometer reading"), "85000");
+      // A colleague records a reading while this page is open.
+      api.stored = { ...api.stored, mileageKm: 86000 };
+      api.version += 1;
+
+      await userEvent.click(screen.getByRole("button", { name: "Record mileage" }));
+
+      expect(await screen.findByRole("alert")).toHaveTextContent("Someone else changed this in the meantime.");
+      expect(await screen.findByText("86,000 km")).toBeInTheDocument();
+      expect(screen.getByLabelText("Odometer reading")).toHaveValue(85000);
+      expect(api.changes).toEqual(['"3"']);
+
+      // Recording again is a deliberate choice, now against the colleague's version.
+      await userEvent.click(screen.getByRole("button", { name: "Record mileage" }));
+
+      expect(await screen.findByText("85,000 km")).toBeInTheDocument();
+      expect(api.changes).toEqual(['"3"', '"4"']);
+    });
+
+    it("does not transfer a vehicle someone else transferred in the meantime and shows its new owner", async () => {
+      const api = versionedVehicleApi();
+      await userEvent.type(await screen.findByLabelText("New owner"), "Wagner");
+      await userEvent.click(screen.getByRole("button", { name: "Find" }));
+      const transferButton = await screen.findByRole("button", { name: "Transfer to Jonas Wagner" });
+      // A colleague hands the vehicle to someone else first.
+      api.stored = { ...api.stored, customerId: "customer-3" };
+      api.version += 1;
+
+      await userEvent.click(transferButton);
+
+      expect(await screen.findByRole("alert")).toHaveTextContent("Someone else changed this in the meantime.");
+      expect(api.changes).toEqual(['"3"']);
+      expect(screen.queryByRole("status")).not.toBeInTheDocument();
+      await waitFor(() =>
+        expect(screen.getByRole("link", { name: "← Owner" })).toHaveAttribute("href", "/customers/customer-3"),
+      );
+    });
   });
 
   it("does not offer mechanics to change the owner", async () => {
