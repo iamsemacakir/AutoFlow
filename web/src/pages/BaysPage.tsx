@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { api, unwrap } from "../api/client";
+import { api, ifMatch, isStale, unwrap } from "../api/client";
 import type { BayDetails } from "../api/types";
 import { useAuth } from "../auth/AuthContext";
 import { Card, Empty, ErrorMessage, Loading, PageHeader } from "../components/ui";
@@ -67,21 +67,51 @@ export function BaysPage() {
   );
 }
 
-function BayRow({ bay, owner, onChanged }: { bay: BayDetails; owner: boolean; onChanged: () => Promise<unknown> }) {
-  const [name, setName] = useState(bay.name);
+/**
+ * One bay with the owner's actions. The list carries no versions (ADR 0024),
+ * so for an owner the row loads its bay: that shows its current name and
+ * state and gives the version that renaming and taking it out of or back
+ * into service send as `If-Match`. Until it has arrived, the actions wait.
+ */
+function BayRow({ bay: listed, owner, onChanged }: { bay: BayDetails; owner: boolean; onChanged: () => Promise<unknown> }) {
+  const queryClient = useQueryClient();
+  const current = useQuery({
+    queryKey: ["bay", listed.id],
+    queryFn: async () => unwrap(await api.GET("/api/bays/{id}", { params: { path: { id: listed.id } } })),
+    enabled: owner,
+    placeholderData: listed,
+  });
+  const bay = current.data ?? listed;
+  const loaded = !current.isPlaceholderData && current.isSuccess;
+  const [name, setName] = useState(listed.name);
   const path = { params: { path: { id: bay.id } } };
+  const headers = () => ifMatch(`/api/bays/${bay.id}`);
+
+  const changed = async (next: BayDetails) => {
+    queryClient.setQueryData(["bay", bay.id], next);
+    await onChanged();
+  };
+  // A colleague changed the bay since the page was loaded: show it as it is now;
+  // a typed name stays in the field.
+  const reloadIfStale = (error: unknown) =>
+    isStale(error)
+      ? Promise.all([queryClient.invalidateQueries({ queryKey: ["bay", bay.id] }), onChanged()])
+      : undefined;
+
   const rename = useMutation({
-    mutationFn: async () => unwrap(await api.PUT("/api/bays/{id}", { ...path, body: { name } })),
-    onSuccess: onChanged,
+    mutationFn: async () => unwrap(await api.PUT("/api/bays/{id}", { ...path, body: { name }, headers: headers() })),
+    onSuccess: changed,
+    onError: reloadIfStale,
   });
   const toggle = useMutation({
     mutationFn: async () =>
       unwrap(
         bay.isInService
-          ? await api.POST("/api/bays/{id}/take-out-of-service", path)
-          : await api.POST("/api/bays/{id}/return-to-service", path),
+          ? await api.POST("/api/bays/{id}/take-out-of-service", { ...path, headers: headers() })
+          : await api.POST("/api/bays/{id}/return-to-service", { ...path, headers: headers() }),
       ),
-    onSuccess: onChanged,
+    onSuccess: changed,
+    onError: reloadIfStale,
   });
 
   return (
@@ -96,17 +126,21 @@ function BayRow({ bay, owner, onChanged }: { bay: BayDetails; owner: boolean; on
             }}
           >
             <input value={name} onChange={(e) => setName(e.target.value)} aria-label={`Name of ${bay.name}`} />
-            {name !== bay.name && <button type="submit">Rename</button>}
+            {name !== bay.name && (
+              <button type="submit" disabled={!loaded || rename.isPending}>
+                Rename
+              </button>
+            )}
           </form>
         ) : (
           bay.name
         )}
-        <ErrorMessage error={rename.error ?? toggle.error} />
+        <ErrorMessage error={rename.error ?? toggle.error ?? current.error} />
       </td>
       <td>{bay.isInService ? "In service" : <span className="warning">Out of service</span>}</td>
       {owner && (
         <td className="number">
-          <button type="button" onClick={() => toggle.mutate()} disabled={toggle.isPending}>
+          <button type="button" onClick={() => toggle.mutate()} disabled={!loaded || toggle.isPending}>
             {bay.isInService ? "Take out of service" : "Return to service"}
           </button>
         </td>
