@@ -112,3 +112,4 @@ front-desk changes get the same protection, one page at a time.
 - [x] Day schedule: load the opened appointment for its version; check in, no-show, cancel and reschedule with `If-Match`
 - [x] Invoice page: record a payment with `If-Match`; on 412 show the current balance instead of taking the money twice
 - [x] Bays page: rename and take out of / return to service with `If-Match` (the list carries no versions, so load the bay first)
+- [x] Staff page: change a role, deactivate and reactivate with `If-Match` (load each account first, as on the bays page)

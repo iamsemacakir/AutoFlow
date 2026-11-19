@@ -118,9 +118,10 @@ The client remembers the `ETag` of every resource it loads and sends it as
 or transfers it, changes a work order, records a payment on an invoice,
 checks in, moves, cancels or marks a no-show on an appointment (the
 schedule's panel loads the appointment for its version first), or renames a
-bay or takes it out of or back into service (the bays page loads each bay
-for its version first); if a colleague got there first, it says so and
-shows their version instead of overwriting it.
+bay or takes it out of or back into service, or changes a staff account's
+role or deactivates or reactivates it (the bays and staff pages load each
+bay or account for its version first); if a colleague got there first, it
+says so and shows their version instead of overwriting it.
 
 Sign in with an account of the API (see "Signing in" below). The client's
 API types are generated from `web/openapi.json`, a committed copy of the

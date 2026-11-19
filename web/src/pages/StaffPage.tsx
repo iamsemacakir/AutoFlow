@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { api, unwrap } from "../api/client";
+import { api, ifMatch, isStale, unwrap } from "../api/client";
 import type { Role, UserDetails } from "../api/types";
 import { useAuth } from "../auth/AuthContext";
 import { Card, ErrorMessage, Field, Loading, PageHeader } from "../components/ui";
@@ -84,24 +84,49 @@ export function StaffPage() {
   );
 }
 
-function UserRow({ user }: { user: UserDetails }) {
+/**
+ * One staff account with the owner's actions. The list carries no versions
+ * (ADR 0024), so the row loads its account: that shows its current role and
+ * state and gives the version that a role change, deactivation and
+ * reactivation send as `If-Match`. Until it has arrived, the actions wait.
+ */
+function UserRow({ user: listed }: { user: UserDetails }) {
   const { user: me } = useAuth();
   const queryClient = useQueryClient();
-  const refresh = () => queryClient.invalidateQueries({ queryKey: ["users"] });
+  const current = useQuery({
+    queryKey: ["user", listed.id],
+    queryFn: async () => unwrap(await api.GET("/api/users/{id}", { params: { path: { id: listed.id } } })),
+    placeholderData: listed,
+  });
+  const user = current.data ?? listed;
+  const loaded = !current.isPlaceholderData && current.isSuccess;
   const path = { params: { path: { id: user.id } } };
+  const headers = () => ifMatch(`/api/users/${user.id}`);
+
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ["users"] });
+  const changed = async (next: UserDetails) => {
+    queryClient.setQueryData(["user", user.id], next);
+    await refresh();
+  };
+  // Another owner changed the account since the page was loaded: show it as it is now.
+  const reloadIfStale = (error: unknown) =>
+    isStale(error) ? Promise.all([queryClient.invalidateQueries({ queryKey: ["user", user.id] }), refresh()]) : undefined;
 
   const changeRole = useMutation({
-    mutationFn: async (role: string) => unwrap(await api.PUT("/api/users/{id}/role", { ...path, body: { role } })),
-    onSuccess: refresh,
+    mutationFn: async (role: string) =>
+      unwrap(await api.PUT("/api/users/{id}/role", { ...path, body: { role }, headers: headers() })),
+    onSuccess: changed,
+    onError: reloadIfStale,
   });
   const toggle = useMutation({
     mutationFn: async () =>
       unwrap(
         user.isActive
-          ? await api.POST("/api/users/{id}/deactivate", path)
-          : await api.POST("/api/users/{id}/reactivate", path),
+          ? await api.POST("/api/users/{id}/deactivate", { ...path, headers: headers() })
+          : await api.POST("/api/users/{id}/reactivate", { ...path, headers: headers() }),
       ),
-    onSuccess: refresh,
+    onSuccess: changed,
+    onError: reloadIfStale,
   });
 
   return (
@@ -109,19 +134,24 @@ function UserRow({ user }: { user: UserDetails }) {
       <td>{user.displayName}</td>
       <td>{user.email}</td>
       <td>
-        <select value={user.role} onChange={(e) => changeRole.mutate(e.target.value)} aria-label={`Role of ${user.displayName}`}>
+        <select
+          value={user.role}
+          onChange={(e) => changeRole.mutate(e.target.value)}
+          disabled={!loaded || changeRole.isPending}
+          aria-label={`Role of ${user.displayName}`}
+        >
           {roles.map((role) => (
             <option key={role} value={role}>
               {humanize(role)}
             </option>
           ))}
         </select>
-        <ErrorMessage error={changeRole.error ?? toggle.error} />
+        <ErrorMessage error={changeRole.error ?? toggle.error ?? current.error} />
       </td>
       <td>{user.lastSignInAt ? formatDateTime(user.lastSignInAt) : "never"}</td>
       <td className="number">
         {user.id !== me?.id && (
-          <button type="button" className={user.isActive ? "danger" : undefined} onClick={() => toggle.mutate()} disabled={toggle.isPending}>
+          <button type="button" className={user.isActive ? "danger" : undefined} onClick={() => toggle.mutate()} disabled={!loaded || toggle.isPending}>
             {user.isActive ? "Deactivate" : "Reactivate"}
           </button>
         )}
