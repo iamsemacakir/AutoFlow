@@ -113,3 +113,4 @@ front-desk changes get the same protection, one page at a time.
 - [x] Invoice page: record a payment with `If-Match`; on 412 show the current balance instead of taking the money twice
 - [x] Bays page: rename and take out of / return to service with `If-Match` (the list carries no versions, so load the bay first)
 - [x] Staff page: change a role, deactivate and reactivate with `If-Match` (load each account first, as on the bays page)
+- [x] Work order page: adding a labour or part line sends `If-Match` too (removing lines and the status actions already did); on 412 show the current lines and keep the typed line; page tests for lines, status flow, roles and the approved-total deviation

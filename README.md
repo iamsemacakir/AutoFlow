@@ -115,7 +115,8 @@ once and `npm run e2e` in `web/`. CI does the same on every push.
 
 The client remembers the `ETag` of every resource it loads and sends it as
 `If-Match` when it edits or deletes a customer, records a vehicle's mileage
-or transfers it, changes a work order, records a payment on an invoice,
+or transfers it, adds or removes a work order line or moves the work order
+on (approve, start, complete, cancel), records a payment on an invoice,
 checks in, moves, cancels or marks a no-show on an appointment (the
 schedule's panel loads the appointment for its version first), or renames a
 bay or takes it out of or back into service, or changes a staff account's

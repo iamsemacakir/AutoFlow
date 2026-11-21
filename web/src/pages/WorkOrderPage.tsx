@@ -211,18 +211,26 @@ export function WorkOrderPage() {
           </table>
         )}
         <ErrorMessage error={removeLine.error} />
-        {editable && <AddLine workOrderId={id} onAdded={update} />}
+        {editable && <AddLine workOrderId={id} onAdded={update} onError={reloadIfStale} />}
       </Card>
     </>
   );
 }
 
-function AddLine({ workOrderId, onAdded }: { workOrderId: string; onAdded: (next: WorkOrderDetails) => void }) {
+function AddLine({
+  workOrderId,
+  onAdded,
+  onError,
+}: {
+  workOrderId: string;
+  onAdded: (next: WorkOrderDetails) => void;
+  onError: (error: unknown) => void;
+}) {
   const [kind, setKind] = useState<"labour" | "part">("labour");
   const [form, setForm] = useState({ description: "", partNumber: "", quantity: "", price: "" });
   const add = useMutation({
     mutationFn: async () => {
-      const path = { params: { path: { id: workOrderId } } };
+      const path = { params: { path: { id: workOrderId } }, headers: ifMatch(`/api/work-orders/${workOrderId}`) };
       return kind === "labour"
         ? unwrap(
             await api.POST("/api/work-orders/{id}/labour-lines", {
@@ -246,6 +254,8 @@ function AddLine({ workOrderId, onAdded }: { workOrderId: string; onAdded: (next
       setForm({ description: "", partNumber: "", quantity: "", price: "" });
       onAdded(next);
     },
+    // The form keeps what was typed, so the line can be added again to the newer version.
+    onError,
   });
   const set = (key: keyof typeof form) => (e: { target: { value: string } }) => setForm({ ...form, [key]: e.target.value });
 
