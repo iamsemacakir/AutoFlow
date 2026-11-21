@@ -15,6 +15,9 @@ public static class AuthClaims
     public const string Role = "role";
     public const string TokenId = "jti";
 
+    /// <summary>Which password the token was signed in with (<see cref="PasswordStamp"/>).</summary>
+    public const string PasswordStamp = "pwd";
+
     /// <summary>The signed-in user's id, from the token's subject.</summary>
     /// <exception cref="InvalidOperationException">The principal is not an authenticated AutoFlow user.</exception>
     public static Guid UserId(this ClaimsPrincipal principal)

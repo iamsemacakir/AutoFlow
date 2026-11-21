@@ -113,6 +113,52 @@ public sealed class AuthEndpointsTests : IDisposable
         Assert.NotEmpty(await ApiDatabaseFixture.SignInAsync(_anonymous, email, "a brand new password"));
     }
 
+    [Fact]
+    public async Task Changing_the_password_ends_every_session_signed_in_with_the_old_one()
+    {
+        var email = await CreateUserAsync(UserRole.Mechanic);
+        var desk = await ApiDatabaseFixture.SignInAsync(_anonymous, email);
+        var phone = await ApiDatabaseFixture.SignInAsync(_anonymous, email);
+
+        using var changed = await ChangePasswordAsync(desk, ApiDatabaseFixture.StaffPassword, "a brand new password");
+        Assert.Equal(HttpStatusCode.NoContent, changed.StatusCode);
+
+        // The session that changed it and the one somebody else may hold alike.
+        using var fromDesk = await GetMeAsync(desk);
+        using var fromPhone = await GetMeAsync(phone);
+        await AssertProblemAsync(fromDesk, HttpStatusCode.Unauthorized, "auth.unauthenticated");
+        await AssertProblemAsync(fromPhone, HttpStatusCode.Unauthorized, "auth.unauthenticated");
+
+        var fresh = await ApiDatabaseFixture.SignInAsync(_anonymous, email, "a brand new password");
+        using var me = await GetMeAsync(fresh);
+        Assert.Equal(HttpStatusCode.OK, me.StatusCode);
+    }
+
+    [Fact]
+    public async Task A_refused_password_change_keeps_the_session()
+    {
+        var email = await CreateUserAsync(UserRole.Mechanic);
+        var token = await ApiDatabaseFixture.SignInAsync(_anonymous, email);
+
+        using var refused = await ChangePasswordAsync(token, "not my password", "a brand new password");
+        await AssertProblemAsync(refused, HttpStatusCode.BadRequest, "auth.wrong_current_password");
+
+        using var me = await GetMeAsync(token);
+        Assert.Equal(HttpStatusCode.OK, me.StatusCode);
+    }
+
+    [Fact]
+    public async Task The_token_does_not_carry_the_password_hash()
+    {
+        var token = await ApiDatabaseFixture.SignInAsync(_anonymous, ApiDatabaseFixture.EmailFor(UserRole.Mechanic));
+        var payload = System.Text.Encoding.UTF8.GetString(Base64UrlDecode(token.Split('.')[1]));
+
+        using var claims = System.Text.Json.JsonDocument.Parse(payload);
+        var stamp = claims.RootElement.GetProperty("pwd").GetString();
+        Assert.Equal(22, stamp?.Length);
+        Assert.DoesNotContain("PBKDF2", payload, StringComparison.OrdinalIgnoreCase);
+    }
+
     public void Dispose() => _anonymous.Dispose();
 
     private async Task<string> CreateUserAsync(UserRole role)

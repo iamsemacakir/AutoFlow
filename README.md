@@ -43,7 +43,7 @@ TypeScript** web client. One command starts it with a demo workshop.
 
 - **Clean architecture**: Domain (no dependencies) ← Application (use
   cases, ports) ← Infrastructure (EF Core, PostgreSQL, PDF) and API
-  (minimal APIs). Decisions are recorded in 23 [ADRs](docs/adr) and
+  (minimal APIs). Decisions are recorded in 25 [ADRs](docs/adr) and
   [docs/architecture.md](docs/architecture.md).
 - **Tests on every level** (more than 850): domain and use-case unit tests,
   persistence tests against real PostgreSQL (Testcontainers), API tests
@@ -179,7 +179,7 @@ curl -s localhost:5080/api/auth/me -H "Authorization: Bearer $TOKEN"
 | --- | --- | --- |
 | `POST /api/auth/token` | Sign in (`email`, `password`); returns `accessToken`, `expiresAt` and the account | 200, 400, 401 |
 | `GET /api/auth/me` | The signed-in account | 200, 401 |
-| `POST /api/auth/me/password` | Change your own password (`currentPassword`, `newPassword`) | 204, 400, 401, 422 |
+| `POST /api/auth/me/password` | Change your own password (`currentPassword`, `newPassword`); every token signed in with the old one stops working, this one included | 204, 400, 401, 422 |
 | `GET /api/users` | Staff accounts (owners only) | 200, 401, 403 |
 | `POST /api/users` | Open an account (`email`, `displayName`, `role`, `password`) | 201 + `Location`, 400, 401, 403, 409, 422 |
 | `GET /api/users/{id}` | One account | 200, 401, 403, 404 |
@@ -203,8 +203,9 @@ OpenAPI document. The matrix is pinned by `AuthorizationMatrixTests`.
 
 Passwords need 10 to 128 characters. Tokens are signed with
 `Auth:SigningKey` (set `Auth__SigningKey` to a long random value outside
-development) and last `Auth:TokenLifetime` (8 hours by default). The
-workshop always keeps an active owner.
+development) and last `Auth:TokenLifetime` (8 hours by default), unless
+the account is deactivated or its password changed before then (ADR 0025).
+The workshop always keeps an active owner.
 
 ### Customers API
 

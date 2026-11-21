@@ -255,7 +255,10 @@ authentication. Business rules do not live here.
 
 - Authentication is JWT bearer (`Auth/`): `JwtAccessTokenIssuer` signs
   tokens with `Auth:SigningKey`, and every request re-reads the account so
-  deactivation and role changes apply at once. Endpoints name an
+  deactivation and role changes apply at once; a token also carries a
+  keyed stamp of the password hash (`PasswordStamp`), so a new password
+  ends every session signed in with the old one
+  ([ADR 0025](adr/0025-password-change-ends-sessions.md)). Endpoints name an
   authorization policy (`Policies.Staff`, `FrontDesk`, `ManageWorkshop`)
   and document 401/403 with `ProducesAuthProblems()`. A fallback policy
   requires a signed-in user for anything without a policy of its own, so a

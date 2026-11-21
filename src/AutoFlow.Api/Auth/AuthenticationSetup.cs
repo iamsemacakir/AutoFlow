@@ -10,7 +10,8 @@ internal static class AuthenticationSetup
     /// <summary>
     /// Bearer-token authentication with tokens from <see cref="JwtAccessTokenIssuer"/>.
     /// Every request re-reads the account: a deactivated user's tokens stop
-    /// working at once, and a role change takes effect on the next request.
+    /// working at once, a role change takes effect on the next request, and
+    /// a changed password ends every session signed in with the old one.
     /// </summary>
     public static AuthOptions AddAutoFlowAuthentication(this IServiceCollection services, IConfiguration configuration)
     {
@@ -53,6 +54,13 @@ internal static class AuthenticationSetup
         if (user is not { IsActive: true })
         {
             context.Fail("The account no longer exists or has been deactivated.");
+            return;
+        }
+
+        var options = context.HttpContext.RequestServices.GetRequiredService<AuthOptions>();
+        if (!PasswordStamp.Matches(user, options, identity.FindFirst(AuthClaims.PasswordStamp)?.Value))
+        {
+            context.Fail("The password has been changed since the token was issued.");
             return;
         }
 

@@ -102,6 +102,7 @@ left out; each is one screen change with its tests.
 - [x] `ETag` on every single resource and `If-Match` on every change (412 for a stale version, enforced again at commit time; ADR 0024)
 - [x] The web client sends `If-Match` when editing or deleting a customer and when changing a work order, and shows the newer version on 412
 - [x] License (MIT)
+- [x] A password change ends every session signed in with the old password (keyed password stamp in the token, no migration; ADR 0025)
 
 ## Follow-ups — conditional changes in the web client
 

@@ -10,7 +10,9 @@ namespace AutoFlow.Api.Auth;
 /// <summary>
 /// Issues HMAC-SHA256 signed JWTs naming the user, their e-mail address,
 /// display name and role. The role in the token is a hint for clients; the
-/// API reads the current role from the database on every request.
+/// API reads the current role from the database on every request. The
+/// token also carries the <see cref="PasswordStamp"/>, so changing the
+/// password ends every session signed in with the old one.
 /// </summary>
 internal sealed class JwtAccessTokenIssuer(AuthOptions options, TimeProvider timeProvider) : IAccessTokenIssuer
 {
@@ -38,6 +40,7 @@ internal sealed class JwtAccessTokenIssuer(AuthOptions options, TimeProvider tim
                 new Claim(AuthClaims.Email, user.Email.Value),
                 new Claim(AuthClaims.Name, user.DisplayName),
                 new Claim(AuthClaims.Role, user.Role.ToString()),
+                new Claim(AuthClaims.PasswordStamp, PasswordStamp.For(user, options)),
                 new Claim(AuthClaims.TokenId, Guid.NewGuid().ToString("N", CultureInfo.InvariantCulture)),
             ]),
         });
