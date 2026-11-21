@@ -124,6 +124,10 @@ role or deactivates or reactivates it (the bays and staff pages load each
 bay or account for its version first); if a colleague got there first, it
 says so and shows their version instead of overwriting it.
 
+Changing your password on the account page ends every session signed in
+with the old one; the page signs this tab in again with the new password,
+so only the other sessions have to sign in again.
+
 Sign in with an account of the API (see "Signing in" below). The client's
 API types are generated from `web/openapi.json`, a committed copy of the
 API's OpenAPI document: after changing the API's contract, run the API

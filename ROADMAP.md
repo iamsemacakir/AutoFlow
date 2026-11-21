@@ -103,6 +103,7 @@ left out; each is one screen change with its tests.
 - [x] The web client sends `If-Match` when editing or deleting a customer and when changing a work order, and shows the newer version on 412
 - [x] License (MIT)
 - [x] A password change ends every session signed in with the old password (keyed password stamp in the token, no migration; ADR 0025)
+- [x] The account page signs in again with the new password after a change, so only the other sessions end
 
 ## Follow-ups — conditional changes in the web client
 

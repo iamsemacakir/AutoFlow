@@ -6,11 +6,17 @@ import { Card, ErrorMessage, Field, PageHeader } from "../components/ui";
 import { humanize } from "../lib/format";
 
 export function AccountPage() {
-  const { user } = useAuth();
+  const { user, signIn } = useAuth();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const change = useMutation({
-    mutationFn: async () => unwrap(await api.POST("/api/auth/me/password", { body: { currentPassword, newPassword } })),
+    mutationFn: async () => {
+      unwrap(await api.POST("/api/auth/me/password", { body: { currentPassword, newPassword } }));
+      // The change ends every session, this one included (ADR 0025): sign in again with the new password.
+      if (user) {
+        await signIn(user.email, newPassword);
+      }
+    },
     onSuccess: () => {
       setCurrentPassword("");
       setNewPassword("");
@@ -40,7 +46,11 @@ export function AccountPage() {
             </button>
           </div>
         </form>
-        {change.isSuccess && <p className="success">Your password has been changed.</p>}
+        {change.isSuccess && (
+          <p className="success" role="status">
+            Your password has been changed. Every other session has been signed out.
+          </p>
+        )}
         <ErrorMessage error={change.error} />
       </Card>
     </>

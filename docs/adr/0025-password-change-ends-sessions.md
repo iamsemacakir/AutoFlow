@@ -27,7 +27,8 @@ already hold a token.
   keyed digest reveals nothing about the hash to whoever holds the token.
 - **Every session ends, the one that changed it included.** The API keeps
   `POST /api/auth/me/password` as it is (204); a client that wants to stay
-  signed in signs in again with the new password.
+  signed in signs in again with the new password, as the web client's
+  account page does.
 
 ## Consequences
 
