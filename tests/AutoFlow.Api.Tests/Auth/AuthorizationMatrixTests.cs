@@ -40,6 +40,7 @@ public sealed class AuthorizationMatrixTests(WebApplicationFactory<Program> fact
         { "TransferVehicle", Policies.FrontDesk },
 
         { "ListVehicleWorkOrders", Policies.Staff },
+        { "ListWorkOrders", Policies.Staff },
         { "GetWorkOrder", Policies.Staff },
         { "AddLabourLine", Policies.Staff },
         { "AddPartLine", Policies.Staff },

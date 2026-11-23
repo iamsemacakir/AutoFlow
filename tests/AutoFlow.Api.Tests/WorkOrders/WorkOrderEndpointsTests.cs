@@ -170,5 +170,56 @@ public sealed class WorkOrderEndpointsTests : IDisposable
         await AssertProblemAsync(response, HttpStatusCode.BadRequest, "paging.invalid_page_size");
     }
 
+    [Fact]
+    public async Task Get_list_shows_a_customers_work_orders_across_vehicles_by_status()
+    {
+        var owner = await _client.CreateCustomerAsync("Anna", "Schmidt");
+        var golf = await _client.RegisterVehicleAsync(owner.Id);
+        var passat = await _client.RegisterVehicleAsync(owner.Id);
+        var draft = await _client.OpenWorkOrderAsync(golf.Id, "Rattling exhaust");
+        var completed = await _client.CompleteWorkOrderAsync(passat.Id);
+        var otherCustomer = await _client.CreateCustomerAsync("Ben", "Wagner");
+        await _client.OpenWorkOrderAsync((await _client.RegisterVehicleAsync(otherCustomer.Id)).Id);
+
+        var all = await _client.GetFromJsonAsync<PagedList<WorkOrderDetails>>(
+            Url($"/api/work-orders?customerId={owner.Id}"));
+        var drafts = await _client.GetFromJsonAsync<PagedList<WorkOrderDetails>>(
+            Url($"/api/work-orders?customerId={owner.Id}&status=Draft"));
+        var done = await _client.GetFromJsonAsync<PagedList<WorkOrderDetails>>(
+            Url($"/api/work-orders?customerId={owner.Id}&status=completed"));
+
+        Assert.Equal(new[] { completed.Id, draft.Id }, all!.Items.Select(w => w.Id).ToArray());
+        Assert.Equal(draft.Id, Assert.Single(drafts!.Items).Id);
+        var only = Assert.Single(done!.Items);
+        Assert.Equal((completed.Id, passat.Id, "Completed"), (only.Id, only.VehicleId, only.Status));
+    }
+
+    [Fact]
+    public async Task Get_list_without_filters_starts_with_the_newest_work_order_of_the_workshop()
+    {
+        var owner = await _client.CreateCustomerAsync("Anna", "Schmidt");
+        var vehicle = await _client.RegisterVehicleAsync(owner.Id);
+        var opened = await _client.OpenWorkOrderAsync(vehicle.Id);
+
+        var page = await _client.GetFromJsonAsync<PagedList<WorkOrderDetails>>(Url("/api/work-orders?pageSize=100"));
+
+        Assert.Contains(page!.Items, w => w.Id == opened.Id);
+        Assert.True(page.TotalCount >= 1);
+        Assert.Equal(
+            page.Items.Select(w => w.CreatedAt).OrderDescending().ToArray(),
+            page.Items.Select(w => w.CreatedAt).ToArray());
+    }
+
+    [Theory]
+    [InlineData("/api/work-orders?status=Open", "work_order.unknown_status")]
+    [InlineData("/api/work-orders?page=0", "paging.invalid_page")]
+    [InlineData("/api/work-orders?pageSize=101", "paging.invalid_page_size")]
+    public async Task Get_list_with_invalid_filters_returns_400(string url, string code)
+    {
+        using var response = await _client.GetAsync(Url(url));
+
+        await AssertProblemAsync(response, HttpStatusCode.BadRequest, code);
+    }
+
     public void Dispose() => _client.Dispose();
 }

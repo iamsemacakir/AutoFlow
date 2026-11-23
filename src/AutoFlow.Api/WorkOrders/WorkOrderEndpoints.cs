@@ -70,7 +70,8 @@ public sealed record CancelWorkOrderRequest(string? Reason) : IValidatableReques
 /// <summary>
 /// Work orders as a sub-resource of the vehicle they are for
 /// (<c>/api/vehicles/{vehicleId}/work-orders</c>: service history, open) and
-/// as a resource of their own (<c>/api/work-orders/{id}</c>). A work order
+/// as a resource of their own (<c>/api/work-orders/{id}</c>, and the whole
+/// workshop's list at <c>/api/work-orders</c>). A work order
 /// stays at its URL for good, whatever happens to the vehicle. Lines have no
 /// URL of their own: they are added and removed through their work order, and
 /// every line change answers with the whole updated work order. Each status
@@ -109,6 +110,14 @@ internal static class WorkOrderEndpoints
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
 
         var workOrders = app.MapGroup("/api/work-orders").WithTags(Tag).WithRequestValidation();
+
+        workOrders.MapGet("/", ListWorkOrders)
+            .WithName("ListWorkOrders")
+            .RequireAuthorization(Policies.Staff)
+            .ProducesAuthProblems()
+            .WithSummary("Lists the workshop's work orders page by page, newest first, optionally by status and customer.")
+            .Produces<PagedList<WorkOrderDetails>>()
+            .ProducesProblem(StatusCodes.Status400BadRequest);
 
         workOrders.MapGet("/{id:guid}", GetWorkOrder)
             .WithRowVersion<WorkOrder>(readOnly: true)
@@ -195,6 +204,21 @@ internal static class WorkOrderEndpoints
     {
         var result = await handler.HandleAsync(
             new ListVehicleWorkOrdersQuery(vehicleId, page ?? 1, pageSize ?? Paging.DefaultPageSize),
+            cancellationToken);
+
+        return result.Match(value => Results.Ok(value), error => error.ToProblem());
+    }
+
+    private static async Task<IResult> ListWorkOrders(
+        string? status,
+        Guid? customerId,
+        int? page,
+        int? pageSize,
+        ListWorkOrdersHandler handler,
+        CancellationToken cancellationToken)
+    {
+        var result = await handler.HandleAsync(
+            new ListWorkOrdersQuery(status, customerId, page ?? 1, pageSize ?? Paging.DefaultPageSize),
             cancellationToken);
 
         return result.Match(value => Results.Ok(value), error => error.ToProblem());

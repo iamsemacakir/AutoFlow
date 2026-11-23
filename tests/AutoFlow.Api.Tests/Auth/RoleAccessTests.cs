@@ -36,6 +36,7 @@ public sealed class RoleAccessTests : IDisposable
 
         using var customers = await _mechanic.GetAsync(Url("/api/customers"));
         using var schedule = await _mechanic.GetAsync(Url("/api/schedule?date=2026-11-20"));
+        using var workOrders = await _mechanic.GetAsync(Url("/api/work-orders?status=Draft"));
         using var labour = await _mechanic.PostAsJsonAsync(
             Url($"/api/work-orders/{workOrder.Id}/labour-lines"),
             new { description = "Diagnosis", hours = 0.5m, hourlyRate = 95m });
@@ -49,8 +50,8 @@ public sealed class RoleAccessTests : IDisposable
         using var newBay = await _mechanic.PostAsJsonAsync(Url("/api/bays"), new { name = UniqueBayName() });
 
         Assert.Equal(
-            [HttpStatusCode.OK, HttpStatusCode.OK, HttpStatusCode.OK, HttpStatusCode.OK],
-            new[] { customers.StatusCode, schedule.StatusCode, labour.StatusCode, mileage.StatusCode });
+            [HttpStatusCode.OK, HttpStatusCode.OK, HttpStatusCode.OK, HttpStatusCode.OK, HttpStatusCode.OK],
+            new[] { customers.StatusCode, schedule.StatusCode, workOrders.StatusCode, labour.StatusCode, mileage.StatusCode });
         await AssertProblemAsync(approve, HttpStatusCode.Forbidden, "auth.forbidden");
         await AssertProblemAsync(newCustomer, HttpStatusCode.Forbidden, "auth.forbidden");
         await AssertProblemAsync(invoices, HttpStatusCode.Forbidden, "auth.forbidden");

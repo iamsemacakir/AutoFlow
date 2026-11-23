@@ -124,5 +124,5 @@ whole workshop at a glance: what waits for approval, what is on the lifts,
 what is finished but not invoiced yet.
 
 - [x] Use case and query: list every work order, newest first, by status and by the customer who commissioned it
-- [ ] `GET /api/work-orders` with `status`, `customerId` and paging
+- [x] `GET /api/work-orders` with `status`, `customerId` and paging (staff; pinned in the OpenAPI contract and the web client's types)
 - [ ] Web client: a work orders page with a status filter

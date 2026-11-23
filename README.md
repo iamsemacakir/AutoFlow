@@ -268,6 +268,7 @@ curl -s -X PUT localhost:5080/api/vehicles/<vehicle-id>/mileage -H 'Content-Type
 | --- | --- | --- |
 | `GET /api/vehicles/{vehicleId}/work-orders?page=1&pageSize=20` | A vehicle's service history, newest first, including work orders of former owners | 200, 400, 404 |
 | `POST /api/vehicles/{vehicleId}/work-orders` | Open a draft for the vehicle's current owner (`complaint`, `mileageKm?`); a given reading is also recorded on the vehicle | 201 + `Location`, 400, 404, 409, 422 |
+| `GET /api/work-orders?status=Completed&customerId=…&page=1&pageSize=20` | The whole workshop's work orders, newest first; optionally one status (`work_order.unknown_status` otherwise) and/or the customer who commissioned them | 200, 400 |
 | `GET /api/work-orders/{id}` | Get one work order with its lines and totals | 200, 404 |
 | `POST /api/work-orders/{id}/labour-lines` | Add labour (`description`, `hours`, `hourlyRate`) | 200, 400, 404, 409, 412, 422 |
 | `POST /api/work-orders/{id}/part-lines` | Add a part (`partNumber?`, `description`, `quantity`, `unitPrice`) | 200, 400, 404, 409, 412, 422 |

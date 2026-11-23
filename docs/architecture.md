@@ -224,7 +224,8 @@ authentication. Business rules do not live here.
   value with `PUT` (`/mileage`), a one-off action with `POST` (`/transfer`).
   See [ADR 0007](adr/0007-vehicle-endpoints.md).
   Work orders follow the same pattern under `/api/vehicles/{vehicleId}/work-orders`
-  (open, paged history) and `/api/work-orders/{id}`. A child entity has no
+  (open, paged history) and `/api/work-orders/{id}`, with the whole workshop's
+  list at `/api/work-orders`. A child entity has no
   URL of its own: lines are added under `/labour-lines` and `/part-lines` and
   removed at `/lines/{lineId}`, and each answers 200 with the whole aggregate.
   A status transition is a body-less `POST` action named after the domain
