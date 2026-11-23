@@ -45,6 +45,7 @@ public static class DependencyInjection
         services.AddScoped<CancelWorkOrderHandler>();
         services.AddScoped<GetWorkOrderHandler>();
         services.AddScoped<ListVehicleWorkOrdersHandler>();
+        services.AddScoped<ListWorkOrdersHandler>();
         services.AddScoped<CreateBayHandler>();
         services.AddScoped<RenameBayHandler>();
         services.AddScoped<TakeBayOutOfServiceHandler>();

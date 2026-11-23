@@ -216,6 +216,65 @@ public class WorkOrderPersistenceTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task ListAsync_lists_every_vehicles_work_orders_newest_first_without_tracking()
+    {
+        var (customer, vehicle) = await SeedVehicleAsync();
+        var (otherCustomer, otherVehicle) = await SeedVehicleAsync();
+        // Far enough ahead that work orders other tests leave behind come later in the list.
+        var future = TestData.Now.AddYears(100);
+        var older = WorkOrder.Open(vehicle.Id, customer.Id, "Older", 50_000, future);
+        var newer = WorkOrder.Open(otherVehicle.Id, otherCustomer.Id, "Newer", 50_000, future.AddDays(1));
+        newer.AddLabour("Diagnosis", 0.5m, 95m);
+
+        await using (var seedDb = postgres.CreateContext())
+        {
+            seedDb.WorkOrders.AddRange(older, newer);
+            await seedDb.SaveChangesAsync();
+        }
+
+        await using var db = postgres.CreateContext();
+        var repository = new WorkOrderRepository(db);
+        var firstPage = await repository.ListAsync(null, null, page: 1, pageSize: 2);
+
+        Assert.Equal([newer.Id, older.Id], firstPage.Items.Select(w => w.Id).ToArray());
+        Assert.Equal("Diagnosis", Assert.Single(firstPage.Items[0].Lines).Description);
+        Assert.True(firstPage.TotalCount >= 2);
+        Assert.Empty(db.ChangeTracker.Entries());
+    }
+
+    [Fact]
+    public async Task ListAsync_filters_by_status_and_customer()
+    {
+        var (customer, vehicle) = await SeedVehicleAsync();
+        var (otherCustomer, otherVehicle) = await SeedVehicleAsync();
+        var draft = TestData.WorkOrder(vehicle.Id, customer.Id);
+        var completed = TestData.CompletedWorkOrder(vehicle.Id, customer.Id);
+        var cancelled = TestData.WorkOrder(vehicle.Id, customer.Id);
+        cancelled.Cancel("Customer changed their mind", TestData.Now.AddHours(1));
+        var othersCompleted = TestData.CompletedWorkOrder(otherVehicle.Id, otherCustomer.Id);
+
+        await using (var seedDb = postgres.CreateContext())
+        {
+            seedDb.WorkOrders.AddRange(draft, completed, cancelled, othersCompleted);
+            await seedDb.SaveChangesAsync();
+        }
+
+        await using var db = postgres.CreateContext();
+        var repository = new WorkOrderRepository(db);
+        var ofCustomer = await repository.ListAsync(null, customer.Id, page: 1, pageSize: 10);
+        var completedOfCustomer = await repository.ListAsync(WorkOrderStatus.Completed, customer.Id, page: 1, pageSize: 10);
+        var cancelledOfOther = await repository.ListAsync(WorkOrderStatus.Cancelled, otherCustomer.Id, page: 1, pageSize: 10);
+
+        Assert.Equal(3, ofCustomer.TotalCount);
+        Assert.Equal(
+            new[] { draft.Id, completed.Id, cancelled.Id }.Order(),
+            ofCustomer.Items.Select(w => w.Id).Order());
+        Assert.Equal(completed.Id, Assert.Single(completedOfCustomer.Items).Id);
+        Assert.Equal(1, completedOfCustomer.TotalCount);
+        Assert.Empty(cancelledOfOther.Items);
+    }
+
+    [Fact]
     public async Task Foreign_key_rejects_a_work_order_for_an_unknown_vehicle()
     {
         var customer = await SeedCustomerAsync();

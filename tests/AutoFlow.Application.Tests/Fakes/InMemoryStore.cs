@@ -202,6 +202,28 @@ public sealed class InMemoryStore
             ofVehicle.Count));
     }
 
+    /// <summary>Same filters and ordering as the PostgreSQL repository.</summary>
+    Task<PagedList<WorkOrder>> IWorkOrderRepository.ListAsync(
+        WorkOrderStatus? status,
+        Guid? customerId,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken)
+    {
+        var matching = _workOrders.Values
+            .Where(w => status is null || w.Status == status)
+            .Where(w => customerId is null || w.CustomerId == customerId)
+            .OrderByDescending(w => w.CreatedAt)
+            .ThenBy(w => w.Id)
+            .ToList();
+
+        return Task.FromResult(new PagedList<WorkOrder>(
+            [.. matching.Skip(Paging.Offset(page, pageSize)).Take(pageSize)],
+            page,
+            pageSize,
+            matching.Count));
+    }
+
     public void Add(WorkOrder workOrder) => _pendingWorkOrders.Add(workOrder);
 
     Task<Bay?> IBayRepository.GetByIdAsync(Guid id, CancellationToken cancellationToken) =>

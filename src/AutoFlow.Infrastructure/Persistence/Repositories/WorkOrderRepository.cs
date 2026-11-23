@@ -33,5 +33,35 @@ internal sealed class WorkOrderRepository(AutoFlowDbContext db) : IWorkOrderRepo
         return new PagedList<WorkOrder>(items, page, pageSize, totalCount);
     }
 
+    public async Task<PagedList<WorkOrder>> ListAsync(
+        WorkOrderStatus? status,
+        Guid? customerId,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        IQueryable<WorkOrder> matching = db.WorkOrders.AsNoTracking();
+
+        if (status is { } wantedStatus)
+        {
+            matching = matching.Where(w => w.Status == wantedStatus);
+        }
+
+        if (customerId is { } wantedCustomer)
+        {
+            matching = matching.Where(w => w.CustomerId == wantedCustomer);
+        }
+
+        var totalCount = await matching.CountAsync(cancellationToken);
+        var items = await matching
+            .OrderByDescending(w => w.CreatedAt)
+            .ThenBy(w => w.Id)
+            .Skip(Paging.Offset(page, pageSize))
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return new PagedList<WorkOrder>(items, page, pageSize, totalCount);
+    }
+
     public void Add(WorkOrder workOrder) => db.WorkOrders.Add(workOrder);
 }

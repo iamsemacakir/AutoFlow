@@ -1,4 +1,5 @@
 using AutoFlow.Application.Common;
+using AutoFlow.Domain.WorkOrders;
 
 namespace AutoFlow.Application.WorkOrders;
 
@@ -11,4 +12,9 @@ public static class WorkOrderErrors
         Error.NotFound(
             "work_order.line_not_found",
             $"Work order '{workOrderId}' has no line '{lineId}'.");
+
+    public static Error UnknownStatus(string status) =>
+        Error.Validation(
+            "work_order.unknown_status",
+            $"'{status}' is not a work order status; use one of: {string.Join(", ", Enum.GetNames<WorkOrderStatus>())}.");
 }

@@ -31,5 +31,19 @@ public interface IWorkOrderRepository
         int pageSize,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// One page of the workshop's work orders across all vehicles, newest
+    /// first (by creation time, then id), optionally only those in
+    /// <paramref name="status"/> and/or commissioned by
+    /// <paramref name="customerId"/>. Lines come with each work order. The
+    /// returned entities are read-only snapshots and are not tracked.
+    /// </summary>
+    Task<PagedList<WorkOrder>> ListAsync(
+        WorkOrderStatus? status,
+        Guid? customerId,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default);
+
     void Add(WorkOrder workOrder);
 }
