@@ -6,6 +6,7 @@ import { humanize } from "../lib/format";
 const links: { to: string; label: string; roles?: Role[] }[] = [
   { to: "/", label: "Schedule" },
   { to: "/customers", label: "Customers" },
+  { to: "/work-orders", label: "Work orders" },
   { to: "/invoices", label: "Invoices", roles: ["Owner", "ServiceAdvisor"] },
   { to: "/bays", label: "Bays" },
   { to: "/staff", label: "Staff", roles: ["Owner"] },

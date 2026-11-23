@@ -28,7 +28,9 @@ TypeScript** web client. One command starts it with a demo workshop.
   readings that never go backwards, ownership transfer with history.
 - **Work orders** — `Draft → Approved → InProgress → Completed → Invoiced`,
   labour and part lines with cent-exact totals, the approved estimate kept
-  to show deviations, optimistic concurrency on the whole aggregate.
+  to show deviations, optimistic concurrency on the whole aggregate, and a
+  workshop-wide list filtered by status (what waits for approval, what is on
+  the lifts, what is done but not invoiced yet).
 - **Invoices** — a snapshot of the finished job with VAT on the net total,
   consecutive numbers per year without gaps, part payments, overdue
   tracking and a PDF renderer without third-party dependencies.
@@ -123,6 +125,11 @@ bay or takes it out of or back into service, or changes a staff account's
 role or deactivates or reactivates it (the bays and staff pages load each
 bay or account for its version first); if a colleague got there first, it
 says so and shows their version instead of overwriting it.
+
+The work orders page lists the whole workshop's work orders, newest first,
+with a status filter kept in the address (`/work-orders?status=Completed`),
+so the front desk sees at a glance what is finished and waiting for an
+invoice and mechanics see what is approved and ready to start.
 
 Changing your password on the account page ends every session signed in
 with the old one; the page signs this tab in again with the new password,

@@ -14,6 +14,7 @@ import { SchedulePage } from "./pages/SchedulePage";
 import { StaffPage } from "./pages/StaffPage";
 import { VehiclePage } from "./pages/VehiclePage";
 import { WorkOrderPage } from "./pages/WorkOrderPage";
+import { WorkOrdersPage } from "./pages/WorkOrdersPage";
 
 export function App() {
   return (
@@ -30,6 +31,7 @@ export function App() {
         <Route path="customers" element={<CustomersPage />} />
         <Route path="customers/:id" element={<CustomerPage />} />
         <Route path="vehicles/:id" element={<VehiclePage />} />
+        <Route path="work-orders" element={<WorkOrdersPage />} />
         <Route path="work-orders/:id" element={<WorkOrderPage />} />
         <Route path="bays" element={<BaysPage />} />
         <Route path="account" element={<AccountPage />} />

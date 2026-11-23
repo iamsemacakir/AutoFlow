@@ -27,6 +27,7 @@ describe("App", () => {
     expect(nav.getAllByRole("link").map((link) => link.textContent)).toEqual([
       "Schedule",
       "Customers",
+      "Work orders",
       "Invoices",
       "Bays",
       "Staff",

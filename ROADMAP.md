@@ -125,4 +125,4 @@ what is finished but not invoiced yet.
 
 - [x] Use case and query: list every work order, newest first, by status and by the customer who commissioned it
 - [x] `GET /api/work-orders` with `status`, `customerId` and paging (staff; pinned in the OpenAPI contract and the web client's types)
-- [ ] Web client: a work orders page with a status filter
+- [x] Web client: a work orders page for every role with a status filter in the address, paging and links to each work order and vehicle
