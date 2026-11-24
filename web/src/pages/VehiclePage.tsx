@@ -5,7 +5,7 @@ import { api, ifMatch, isStale, unwrap } from "../api/client";
 import { FRONT_DESK, useAuth } from "../auth/AuthContext";
 import { Card, Empty, ErrorMessage, Field, Loading, PageHeader, StatusBadge } from "../components/ui";
 import type { CustomerDetails } from "../api/types";
-import { formatDateTime, formatMoney, formatNumber, today } from "../lib/format";
+import { formatDateTime, formatMoney, formatNumber, formatTime, toIsoDate, today } from "../lib/format";
 import { slotFrom } from "../lib/schedule";
 
 export function VehiclePage() {
@@ -96,6 +96,7 @@ export function VehiclePage() {
       </div>
       {frontDesk && <BookAppointment vehicleId={id} />}
       {frontDesk && <TransferVehicle vehicleId={id} ownerId={data.customerId} />}
+      <Appointments vehicleId={id} />
       <Card title="Service history">
         <ErrorMessage error={history.error} />
         {history.data?.items.length === 0 && <Empty>No work orders yet.</Empty>}
@@ -127,6 +128,70 @@ export function VehiclePage() {
         )}
       </Card>
     </>
+  );
+}
+
+/** The vehicle's bookings, latest first, whoever made them: when it is due in, and how earlier visits went. */
+function Appointments({ vehicleId }: { vehicleId: string }) {
+  const appointments = useQuery({
+    queryKey: ["vehicle-appointments", vehicleId],
+    queryFn: async () =>
+      unwrap(
+        await api.GET("/api/vehicles/{vehicleId}/appointments", {
+          params: { path: { vehicleId }, query: { page: 1, pageSize: 50 } },
+        }),
+      ),
+  });
+  const bays = useQuery({ queryKey: ["bays"], queryFn: async () => unwrap(await api.GET("/api/bays")) });
+  const bayName = (bayId: string) => bays.data?.find((bay) => bay.id === bayId)?.name ?? "…";
+
+  return (
+    <Card title="Appointments">
+      <ErrorMessage error={appointments.error ?? bays.error} />
+      {appointments.data?.items.length === 0 && <Empty>No appointments yet.</Empty>}
+      {appointments.data && appointments.data.items.length > 0 && (
+        <table>
+          <thead>
+            <tr>
+              <th>When</th>
+              <th>Bay</th>
+              <th>Purpose</th>
+              <th>Status</th>
+              <th />
+            </tr>
+          </thead>
+          <tbody>
+            {appointments.data.items.map((appointment) => (
+              <tr key={appointment.id}>
+                <td>
+                  {formatDateTime(appointment.start)} – {formatTime(appointment.end)}
+                </td>
+                <td>{bayName(appointment.bayId)}</td>
+                <td>{appointment.purpose}</td>
+                <td>
+                  <StatusBadge status={appointment.status} />
+                </td>
+                <td className="number">
+                  {appointment.workOrderId ? (
+                    <Link to={`/work-orders/${appointment.workOrderId}`}>Work order</Link>
+                  ) : (
+                    // The schedule leaves cancelled appointments out, so only the others link to their day.
+                    appointment.status !== "Cancelled" && (
+                      <Link to={`/?date=${toIsoDate(new Date(appointment.start))}`}>On the schedule</Link>
+                    )
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      {appointments.data && appointments.data.totalCount > appointments.data.items.length && (
+        <p className="muted">
+          The latest {appointments.data.items.length} of {appointments.data.totalCount} appointments.
+        </p>
+      )}
+    </Card>
   );
 }
 

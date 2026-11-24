@@ -1,4 +1,4 @@
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Route, Routes } from "react-router-dom";
 import { json, mockApi, pathOf } from "../test/http";
@@ -187,5 +187,93 @@ describe("VehiclePage", () => {
 
     expect(await screen.findByRole("heading", { name: /Volkswagen Golf/ })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Change owner" })).not.toBeInTheDocument();
+  });
+
+  describe("appointments", () => {
+    const appointment = (id: string, start: string, end: string, status: string, extra: object = {}) => ({
+      id,
+      bayId: "bay-1",
+      vehicleId: "vehicle-1",
+      customerId: "customer-1",
+      start,
+      end,
+      purpose: `Visit ${id}`,
+      status,
+      bookedAt: "2026-11-01T08:00:00Z",
+      rescheduledAt: null,
+      workOrderId: null,
+      checkedInAt: null,
+      cancelledAt: null,
+      cancellationReason: null,
+      noShowAt: null,
+      ...extra,
+    });
+
+    function appointmentsApi(items: unknown[], totalCount = items.length) {
+      return mockApi((request) => {
+        const path = pathOf(request);
+        if (path === "/api/vehicles/vehicle-1") {
+          return json(vehicle);
+        }
+        if (path.startsWith("/api/vehicles/vehicle-1/appointments?")) {
+          return json({ items, page: 1, pageSize: 50, totalCount, totalPages: Math.ceil(totalCount / 50) });
+        }
+        if (path === "/api/bays") {
+          return json([{ id: "bay-1", name: "Lift 1", isInService: true, createdAt: "2026-11-01T08:00:00Z" }]);
+        }
+        return json({ items: [], page: 1, pageSize: 50, totalCount: 0, totalPages: 0 });
+      });
+    }
+
+    it("lists the vehicle's appointments with their bay, linking to the day or the work order", async () => {
+      const fetchMock = appointmentsApi([
+        appointment("upcoming", "2026-12-01T10:00:00Z", "2026-12-01T11:30:00Z", "Scheduled"),
+        appointment("called-off", "2026-11-24T10:00:00Z", "2026-11-24T11:00:00Z", "Cancelled", {
+          cancelledAt: "2026-11-20T08:00:00Z",
+          cancellationReason: "Customer is ill",
+        }),
+        appointment("visited", "2026-11-10T10:00:00Z", "2026-11-10T11:00:00Z", "CheckedIn", {
+          workOrderId: "work-order-7",
+          checkedInAt: "2026-11-10T09:55:00Z",
+        }),
+      ]);
+      renderVehicle("ServiceAdvisor");
+
+      const heading = await screen.findByRole("heading", { name: "Appointments" });
+      const card = heading.closest("section") as HTMLElement;
+      const rows = await within(card).findAllByRole("row");
+      expect(rows).toHaveLength(4);
+      const [, upcoming, calledOff, visited] = rows as [HTMLElement, HTMLElement, HTMLElement, HTMLElement];
+
+      expect(within(upcoming).getByText("Visit upcoming")).toBeInTheDocument();
+      expect(within(upcoming).getByText("Lift 1")).toBeInTheDocument();
+      expect(within(upcoming).getByText("Scheduled")).toBeInTheDocument();
+      expect(within(upcoming).getByRole("link", { name: "On the schedule" })).toHaveAttribute("href", "/?date=2026-12-01");
+      expect(within(calledOff).getByText("Cancelled")).toBeInTheDocument();
+      expect(within(calledOff).queryByRole("link")).not.toBeInTheDocument();
+      expect(within(visited).getByText("Checked in")).toBeInTheDocument();
+      expect(within(visited).getByRole("link", { name: "Work order" })).toHaveAttribute("href", "/work-orders/work-order-7");
+      expect(screen.queryByText(/The latest/)).not.toBeInTheDocument();
+
+      const request = fetchMock.mock.calls
+        .map(([sent]) => pathOf(sent as Request))
+        .find((path) => path.startsWith("/api/vehicles/vehicle-1/appointments?"));
+      expect(request).toContain("pageSize=50");
+    });
+
+    it("says how many appointments are left out when there are more than one page", async () => {
+      appointmentsApi([appointment("upcoming", "2026-12-01T10:00:00Z", "2026-12-01T11:00:00Z", "Scheduled")], 51);
+      renderVehicle("Owner");
+
+      expect(await screen.findByText("The latest 1 of 51 appointments.")).toBeInTheDocument();
+    });
+
+    it("shows mechanics the appointments too, or that there are none", async () => {
+      appointmentsApi([]);
+      renderVehicle("Mechanic");
+
+      expect(await screen.findByText("No appointments yet.")).toBeInTheDocument();
+      expect(screen.queryByRole("heading", { name: "Book an appointment" })).not.toBeInTheDocument();
+    });
   });
 });

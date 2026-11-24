@@ -25,7 +25,8 @@ TypeScript** web client. One command starts it with a demo workshop.
   appointments are moved between bays and times, check-in that opens the
   work order.
 - **Customers and vehicles** — search, VIN and plate validation, odometer
-  readings that never go backwards, ownership transfer with history.
+  readings that never go backwards, ownership transfer with history, and
+  each vehicle's appointments and work orders on its page.
 - **Work orders** — `Draft → Approved → InProgress → Completed → Invoiced`,
   labour and part lines with cent-exact totals, the approved estimate kept
   to show deviations, optimistic concurrency on the whole aggregate, and a
@@ -130,6 +131,11 @@ The work orders page lists the whole workshop's work orders, newest first,
 with a status filter kept in the address (`/work-orders?status=Completed`),
 so the front desk sees at a glance what is finished and waiting for an
 invoice and mechanics see what is approved and ready to start.
+
+A vehicle's page shows its appointments next to its service history,
+latest first and in every status, with links to the day on the schedule
+or to the work order a check-in opened, so the counter can answer "when is
+this car booked in?" without paging through the schedule.
 
 Changing your password on the account page ends every session signed in
 with the old one; the page signs this tab in again with the new password,

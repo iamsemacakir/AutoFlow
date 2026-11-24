@@ -135,4 +135,4 @@ answer it next to the work order history.
 
 - [x] Use case and query: a vehicle's appointments, latest start first, by status, including those booked by earlier owners
 - [x] `GET /api/vehicles/{vehicleId}/appointments` with `status` and paging (staff; pinned in the OpenAPI contract and the web client's types)
-- [ ] Web client: the vehicle page lists the vehicle's appointments
+- [x] Web client: the vehicle page lists the vehicle's appointments for every role (bay, purpose, status; links to the day on the schedule or to the work order of the check-in)
