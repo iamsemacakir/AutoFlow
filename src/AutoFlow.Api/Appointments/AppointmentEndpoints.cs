@@ -4,6 +4,7 @@ using AutoFlow.Api.Errors;
 using AutoFlow.Api.Observability;
 using AutoFlow.Api.Validation;
 using AutoFlow.Application.Appointments;
+using AutoFlow.Application.Common;
 using AutoFlow.Domain.Appointments;
 using AutoFlow.Domain.WorkOrders;
 
@@ -77,7 +78,8 @@ public sealed record CancelAppointmentRequest(string? Reason) : IValidatableRequ
 
 /// <summary>
 /// Appointments are booked under the vehicle that is brought in
-/// (<c>POST /api/vehicles/{vehicleId}/appointments</c>) and addressed on
+/// (<c>POST /api/vehicles/{vehicleId}/appointments</c>, where <c>GET</c>
+/// lists the vehicle's appointments, latest first) and addressed on
 /// their own afterwards (<c>/api/appointments/{id}</c>), like work orders,
 /// so the URL survives a sale of the car. Moving one is an action
 /// (<c>/reschedule</c>) because it is checked against the other
@@ -112,6 +114,15 @@ internal static class AppointmentEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict)
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
+
+        byVehicle.MapGet("/", ListVehicleAppointments)
+            .WithName("ListVehicleAppointments")
+            .RequireAuthorization(Policies.Staff)
+            .ProducesAuthProblems()
+            .WithSummary("Lists a vehicle's appointments page by page, latest start first, optionally by status.")
+            .Produces<PagedList<AppointmentDetails>>()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         var appointments = app.MapGroup("/api/appointments").WithTags(Tag).WithRequestValidation();
 
@@ -191,6 +202,21 @@ internal static class AppointmentEndpoints
     {
         var result = await handler.HandleAsync(
             new GetDayScheduleQuery(date, timeZone ?? GetDayScheduleQuery.Utc),
+            cancellationToken);
+
+        return result.Match(value => Results.Ok(value), error => error.ToProblem());
+    }
+
+    private static async Task<IResult> ListVehicleAppointments(
+        Guid vehicleId,
+        string? status,
+        int? page,
+        int? pageSize,
+        ListVehicleAppointmentsHandler handler,
+        CancellationToken cancellationToken)
+    {
+        var result = await handler.HandleAsync(
+            new ListVehicleAppointmentsQuery(vehicleId, status, page ?? 1, pageSize ?? Paging.DefaultPageSize),
             cancellationToken);
 
         return result.Match(value => Results.Ok(value), error => error.ToProblem());

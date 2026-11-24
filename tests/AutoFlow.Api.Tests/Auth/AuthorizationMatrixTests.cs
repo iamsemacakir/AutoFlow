@@ -60,6 +60,7 @@ public sealed class AuthorizationMatrixTests(WebApplicationFactory<Program> fact
 
         { "GetDaySchedule", Policies.Staff },
         { "GetAppointment", Policies.Staff },
+        { "ListVehicleAppointments", Policies.Staff },
         { "BookAppointment", Policies.FrontDesk },
         { "RescheduleAppointment", Policies.FrontDesk },
         { "CheckInAppointment", Policies.FrontDesk },

@@ -134,5 +134,5 @@ the question is "when is this car booked in?", and the vehicle page should
 answer it next to the work order history.
 
 - [x] Use case and query: a vehicle's appointments, latest start first, by status, including those booked by earlier owners
-- [ ] `GET /api/vehicles/{vehicleId}/appointments` with `status` and paging
+- [x] `GET /api/vehicles/{vehicleId}/appointments` with `status` and paging (staff; pinned in the OpenAPI contract and the web client's types)
 - [ ] Web client: the vehicle page lists the vehicle's appointments

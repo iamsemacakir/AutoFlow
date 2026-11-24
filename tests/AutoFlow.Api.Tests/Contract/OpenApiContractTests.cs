@@ -56,6 +56,7 @@ public sealed class OpenApiContractTests(WebApplicationFactory<Program> factory)
         { "RenameBay", "PUT", "/api/bays/{id}", "200 400 404 409 412 422" },
         { "TakeBayOutOfService", "POST", "/api/bays/{id}/take-out-of-service", "200 404 409 412 422" },
         { "ReturnBayToService", "POST", "/api/bays/{id}/return-to-service", "200 404 409 412 422" },
+        { "ListVehicleAppointments", "GET", "/api/vehicles/{vehicleId}/appointments", "200 400 404" },
         { "BookAppointment", "POST", "/api/vehicles/{vehicleId}/appointments", "201 400 404 409 422" },
         { "GetAppointment", "GET", "/api/appointments/{id}", "200 404" },
         { "RescheduleAppointment", "POST", "/api/appointments/{id}/reschedule", "200 400 404 409 412 422" },

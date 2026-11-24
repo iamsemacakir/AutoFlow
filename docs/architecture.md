@@ -240,7 +240,8 @@ authentication. Business rules do not live here.
   renames) with `/take-out-of-service` and `/return-to-service` actions;
   they are never deleted, so there is no `DELETE`.
   Appointments are booked under the vehicle that is brought in
-  (`POST /api/vehicles/{vehicleId}/appointments`) and addressed at
+  (`POST /api/vehicles/{vehicleId}/appointments`, where `GET` pages
+  through the vehicle's appointments) and addressed at
   `/api/appointments/{id}` afterwards; moving one is the `/reschedule`
   action, since it is checked against other appointments rather than
   replacing a value. Timestamps in requests carry an offset and come back

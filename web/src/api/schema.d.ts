@@ -358,7 +358,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** Lists a vehicle's appointments page by page, latest start first, optionally by status. */
+        get: operations["ListVehicleAppointments"];
         put?: never;
         /** Books a bay and slot for the vehicle, for its current owner. */
         post: operations["BookAppointment"];
@@ -882,6 +883,17 @@ export interface components {
             complaint: null | string;
             /** Format: int32 */
             mileageKm: null | number;
+        };
+        PagedListOfAppointmentDetails: {
+            items: components["schemas"]["AppointmentDetails"][];
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            pageSize: number;
+            /** Format: int32 */
+            totalCount: number;
+            /** Format: int32 */
+            totalPages?: number;
         };
         PagedListOfCustomerDetails: {
             items: components["schemas"]["CustomerDetails"][];
@@ -2933,6 +2945,68 @@ export interface operations {
             };
             /** @description Unprocessable Entity */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ListVehicleAppointments: {
+        parameters: {
+            query?: {
+                status?: string;
+                page?: number;
+                pageSize?: number;
+            };
+            header?: never;
+            path: {
+                vehicleId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PagedListOfAppointmentDetails"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

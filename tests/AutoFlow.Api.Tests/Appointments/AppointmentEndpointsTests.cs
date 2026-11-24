@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using AutoFlow.Application.Appointments;
 using AutoFlow.Application.Bays;
+using AutoFlow.Application.Common;
 using AutoFlow.Application.Vehicles;
 using static AutoFlow.Api.Tests.ApiTestHelpers;
 
@@ -223,6 +224,72 @@ public sealed class AppointmentEndpointsTests : IDisposable
             new { start = InAWeek(13), end = InAWeek(14) });
 
         await AssertProblemAsync(response, HttpStatusCode.BadRequest, "validation.failed");
+    }
+
+    [Fact]
+    public async Task Get_list_shows_the_vehicles_appointments_latest_first_and_by_status()
+    {
+        var (bay, vehicle) = await ArrangeAsync();
+        var first = await _client.BookAppointmentAsync(vehicle.Id, bay.Id, InAWeek(9), InAWeek(10));
+        var cancelled = await _client.BookAppointmentAsync(vehicle.Id, bay.Id, InAWeek(24 + 9), InAWeek(24 + 10));
+        var latest = await _client.BookAppointmentAsync(vehicle.Id, bay.Id, InAWeek(48 + 9), InAWeek(48 + 10));
+        var (_, otherVehicle) = await ArrangeAsync();
+        await _client.BookAppointmentAsync(otherVehicle.Id, bay.Id, InAWeek(13), InAWeek(14));
+        (await _client.PostAsJsonAsync(
+            Url($"/api/appointments/{cancelled.Id}/cancel"),
+            new { reason = "Customer is ill" })).Dispose();
+
+        var all = await _client.GetFromJsonAsync<PagedList<AppointmentDetails>>(
+            Url($"/api/vehicles/{vehicle.Id}/appointments"));
+        var scheduled = await _client.GetFromJsonAsync<PagedList<AppointmentDetails>>(
+            Url($"/api/vehicles/{vehicle.Id}/appointments?status=scheduled"));
+        var secondPage = await _client.GetFromJsonAsync<PagedList<AppointmentDetails>>(
+            Url($"/api/vehicles/{vehicle.Id}/appointments?page=2&pageSize=2"));
+
+        Assert.Equal([latest.Id, cancelled.Id, first.Id], all!.Items.Select(a => a.Id).ToArray());
+        Assert.Equal(["Scheduled", "Cancelled", "Scheduled"], all.Items.Select(a => a.Status).ToArray());
+        Assert.Equal([latest.Id, first.Id], scheduled!.Items.Select(a => a.Id).ToArray());
+        Assert.Equal(first.Id, Assert.Single(secondPage!.Items).Id);
+        Assert.Equal((3, 2), (secondPage.TotalCount, secondPage.TotalPages));
+    }
+
+    [Fact]
+    public async Task Get_list_keeps_the_appointments_booked_before_the_vehicle_was_sold()
+    {
+        var (bay, vehicle) = await ArrangeAsync();
+        var booked = await _client.BookAppointmentAsync(vehicle.Id, bay.Id, InAWeek(9), InAWeek(10));
+        var buyer = await _client.CreateCustomerAsync("Ben", "Wagner");
+        using var transferred = await _client.PostAsJsonAsync(
+            Url($"/api/vehicles/{vehicle.Id}/transfer"),
+            new { customerId = buyer.Id });
+        transferred.EnsureSuccessStatusCode();
+
+        var page = await _client.GetFromJsonAsync<PagedList<AppointmentDetails>>(
+            Url($"/api/vehicles/{vehicle.Id}/appointments"));
+
+        var only = Assert.Single(page!.Items);
+        Assert.Equal((booked.Id, vehicle.CustomerId), (only.Id, only.CustomerId));
+    }
+
+    [Fact]
+    public async Task Get_list_of_an_unknown_vehicle_returns_404()
+    {
+        using var response = await _client.GetAsync(Url($"/api/vehicles/{Guid.NewGuid()}/appointments"));
+
+        await AssertProblemAsync(response, HttpStatusCode.NotFound, "vehicle.not_found");
+    }
+
+    [Theory]
+    [InlineData("status=Booked", "appointment.unknown_status")]
+    [InlineData("page=0", "paging.invalid_page")]
+    [InlineData("pageSize=101", "paging.invalid_page_size")]
+    public async Task Get_list_with_invalid_filters_returns_400(string queryString, string code)
+    {
+        var (_, vehicle) = await ArrangeAsync();
+
+        using var response = await _client.GetAsync(Url($"/api/vehicles/{vehicle.Id}/appointments?{queryString}"));
+
+        await AssertProblemAsync(response, HttpStatusCode.BadRequest, code);
     }
 
     public void Dispose() => _client.Dispose();

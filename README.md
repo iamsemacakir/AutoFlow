@@ -328,6 +328,7 @@ curl -s -X POST localhost:5080/api/bays/<bay-id>/take-out-of-service
 
 | Method & path | Purpose | Responses |
 | --- | --- | --- |
+| `GET /api/vehicles/{vehicleId}/appointments?status=Scheduled&page=1&pageSize=20` | A vehicle's appointments, latest start first, including those booked by former owners; optionally one status (`appointment.unknown_status` otherwise) | 200, 400, 404 |
 | `POST /api/vehicles/{vehicleId}/appointments` | Book a bay for the vehicle's current owner (`bayId`, `start`, `end`, `purpose`) | 201 + `Location`, 400, 404, 409, 422 |
 | `GET /api/appointments/{id}` | Get one appointment, in any status | 200, 404 |
 | `POST /api/appointments/{id}/reschedule` | Move a scheduled appointment (`bayId` — the current one to change only the time —, `start`, `end`) | 200, 400, 404, 409, 412, 422 |
@@ -409,7 +410,7 @@ stable `code` to switch on:
 | --- | --- | --- |
 | 400 | `validation.failed` (+ `errors` per field) | body fields missing, blank, too long or out of range |
 | 400 | `request.malformed` | unreadable JSON, wrong value type, unparsable query/route value |
-| 400 | `paging.invalid_page`, `paging.invalid_page_size`, `schedule.unknown_time_zone`, `invoice.unknown_status`, `invoice.unknown_payment_method`, `user.unknown_role`, `auth.wrong_current_password` | paging out of range, unknown time zone, status, payment method or role, wrong current password |
+| 400 | `paging.invalid_page`, `paging.invalid_page_size`, `schedule.unknown_time_zone`, `work_order.unknown_status`, `appointment.unknown_status`, `invoice.unknown_status`, `invoice.unknown_payment_method`, `user.unknown_role`, `auth.wrong_current_password` | paging out of range, unknown time zone, status, payment method or role, wrong current password |
 | 401, 403 | `auth.invalid_credentials`, `auth.unauthenticated`, `auth.forbidden` | wrong sign-in, missing or invalid token, role not allowed |
 | 404 | `customer.not_found`, `vehicle.not_found`, `work_order.not_found`, `work_order.line_not_found`, `bay.not_found`, `appointment.not_found`, `invoice.not_found`, `invoice.not_issued`, `user.not_found` / `route.not_found` | unknown resource / unknown URL |
 | 405, 415 | `request.method_not_allowed`, `request.unsupported_media_type` | wrong method, non-JSON body |
