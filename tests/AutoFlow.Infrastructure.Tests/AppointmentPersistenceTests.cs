@@ -211,6 +211,37 @@ public class AppointmentPersistenceTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task ListByVehicleAsync_pages_the_vehicles_appointments_latest_first_by_status()
+    {
+        var (bay, customer, vehicle) = await SeedAsync();
+        var (_, otherCustomer, otherVehicle) = await SeedAsync();
+        var first = await SeedAppointmentAsync(bay.Id, vehicle.Id, customer.Id, TestData.Slot(9, 1));
+        var second = await SeedAppointmentAsync(bay.Id, vehicle.Id, customer.Id, TestData.Slot(24 + 9, 1));
+        var latest = await SeedAppointmentAsync(bay.Id, vehicle.Id, customer.Id, TestData.Slot(48 + 9, 1));
+        await SeedAppointmentAsync(bay.Id, otherVehicle.Id, otherCustomer.Id, TestData.Slot(11, 1));
+        await using (var settleDb = postgres.CreateContext())
+        {
+            (await settleDb.Appointments.SingleAsync(a => a.Id == second.Id))
+                .Cancel("Customer is ill", TestData.Now);
+            await settleDb.SaveChangesAsync();
+        }
+
+        await using var db = postgres.CreateContext();
+        var repository = new AppointmentRepository(db);
+        var all = await repository.ListByVehicleAsync(vehicle.Id, null, page: 1, pageSize: 20);
+        var secondPage = await repository.ListByVehicleAsync(vehicle.Id, null, page: 2, pageSize: 2);
+        var scheduled = await repository.ListByVehicleAsync(vehicle.Id, AppointmentStatus.Scheduled, page: 1, pageSize: 20);
+
+        Assert.Equal([latest.Id, second.Id, first.Id], all.Items.Select(a => a.Id).ToArray());
+        Assert.Equal(3, all.TotalCount);
+        Assert.Equal(first.Id, Assert.Single(secondPage.Items).Id);
+        Assert.Equal(3, secondPage.TotalCount);
+        Assert.Equal([latest.Id, first.Id], scheduled.Items.Select(a => a.Id).ToArray());
+        Assert.Equal(2, scheduled.TotalCount);
+        Assert.Empty(db.ChangeTracker.Entries());
+    }
+
+    [Fact]
     public async Task ExistsForCustomerAsync_is_true_only_for_customers_who_booked()
     {
         var (bay, customer, vehicle) = await SeedAsync();

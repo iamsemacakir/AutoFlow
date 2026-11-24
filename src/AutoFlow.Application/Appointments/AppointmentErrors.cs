@@ -32,6 +32,11 @@ public static class AppointmentErrors
             $"The vehicle is already booked {clash.Slot} (appointment '{clash.Id}').");
     }
 
+    public static Error UnknownStatus(string status) =>
+        Error.Validation(
+            "appointment.unknown_status",
+            $"'{status}' is not an appointment status; use one of: {string.Join(", ", Enum.GetNames<AppointmentStatus>())}.");
+
     /// <summary>The schedule was asked for in a time zone this system does not know.</summary>
     public static Error UnknownTimeZone(string timeZone) =>
         Error.Validation(

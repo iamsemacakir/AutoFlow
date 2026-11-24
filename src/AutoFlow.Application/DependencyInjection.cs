@@ -58,6 +58,7 @@ public static class DependencyInjection
         services.AddScoped<CancelAppointmentHandler>();
         services.AddScoped<MarkAppointmentNoShowHandler>();
         services.AddScoped<GetAppointmentHandler>();
+        services.AddScoped<ListVehicleAppointmentsHandler>();
         services.AddScoped<GetDayScheduleHandler>();
         services.AddScoped<IssueInvoiceHandler>();
         services.AddScoped<RecordPaymentHandler>();

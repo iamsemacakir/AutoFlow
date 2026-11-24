@@ -126,3 +126,13 @@ what is finished but not invoiced yet.
 - [x] Use case and query: list every work order, newest first, by status and by the customer who commissioned it
 - [x] `GET /api/work-orders` with `status`, `customerId` and paging (staff; pinned in the OpenAPI contract and the web client's types)
 - [x] Web client: a work orders page for every role with a status filter in the address, paging and links to each work order and vehicle
+
+## Follow-ups — a vehicle's appointments
+
+Appointments could only be found day by day on the schedule; at the counter
+the question is "when is this car booked in?", and the vehicle page should
+answer it next to the work order history.
+
+- [x] Use case and query: a vehicle's appointments, latest start first, by status, including those booked by earlier owners
+- [ ] `GET /api/vehicles/{vehicleId}/appointments` with `status` and paging
+- [ ] Web client: the vehicle page lists the vehicle's appointments

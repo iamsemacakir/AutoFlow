@@ -1,3 +1,4 @@
+using AutoFlow.Application.Common;
 using AutoFlow.Domain.Appointments;
 
 namespace AutoFlow.Application.Abstractions;
@@ -44,6 +45,18 @@ public interface IAppointmentRepository
     Task<IReadOnlyList<Appointment>> ListOverlappingAsync(
         DateTimeOffset periodStart,
         DateTimeOffset periodEnd,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// One page of a vehicle's appointments, latest start first (then by id),
+    /// whoever booked them, optionally only those in <paramref name="status"/>.
+    /// The returned entities are read-only snapshots and are not tracked.
+    /// </summary>
+    Task<PagedList<Appointment>> ListByVehicleAsync(
+        Guid vehicleId,
+        AppointmentStatus? status,
+        int page,
+        int pageSize,
         CancellationToken cancellationToken = default);
 
     void Add(Appointment appointment);

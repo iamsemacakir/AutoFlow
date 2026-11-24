@@ -144,7 +144,11 @@ See [ADR 0002](adr/0002-use-case-handlers-and-result-type.md).
   work orders commissioned by earlier owners. `ListWorkOrdersHandler` pages
   through the whole workshop's work orders the same way, optionally by
   status (an unknown name is `work_order.unknown_status`, 400) and by the
-  customer who commissioned them.
+  customer who commissioned them. `ListVehicleAppointmentsHandler` pages
+  through a vehicle's appointments, latest start first and including those
+  booked by earlier owners, optionally by status (an unknown name is
+  `appointment.unknown_status`, 400; `Scheduled` gives the bookings still
+  to come).
 - `AddApplication()` registers the handlers (scoped) and `TimeProvider.System`
   unless another `TimeProvider` was registered first.
 
@@ -194,7 +198,8 @@ See [ADR 0003](adr/0003-ef-core-postgresql-persistence.md).
 - `Pbkdf2PasswordHasher` hashes passwords with PBKDF2-HMAC-SHA512 from the
   base class library; `users` has a unique e-mail index.
 - Read-only queries (searches, lists) use `AsNoTracking`; owned children
-  come with their root (`ListByVehicleAsync` and `ListAsync` return work orders with lines). Customer search
+  come with their root (`ListByVehicleAsync` and `ListAsync` return work orders with lines;
+  the appointment repository's `ListByVehicleAsync` pages the same way). Customer search
   filters with parameterized SQL (`FromSqlRaw`) because the value-converted
   e-mail column cannot be pattern-matched in LINQ; EF Core composes ordering,
   paging and counting on top.

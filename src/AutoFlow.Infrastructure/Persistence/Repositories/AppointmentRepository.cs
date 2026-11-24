@@ -1,4 +1,5 @@
 using AutoFlow.Application.Abstractions;
+using AutoFlow.Application.Common;
 using AutoFlow.Domain.Appointments;
 using Microsoft.EntityFrameworkCore;
 
@@ -47,6 +48,33 @@ internal sealed class AppointmentRepository(AutoFlowDbContext db) : IAppointment
             .OrderBy(a => a.Slot.Start)
             .ThenBy(a => a.Id)
             .ToListAsync(cancellationToken);
+    }
+
+    public async Task<PagedList<Appointment>> ListByVehicleAsync(
+        Guid vehicleId,
+        AppointmentStatus? status,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var matching = db.Appointments
+            .AsNoTracking()
+            .Where(a => a.VehicleId == vehicleId);
+
+        if (status is { } wantedStatus)
+        {
+            matching = matching.Where(a => a.Status == wantedStatus);
+        }
+
+        var totalCount = await matching.CountAsync(cancellationToken);
+        var items = await matching
+            .OrderByDescending(a => a.Slot.Start)
+            .ThenBy(a => a.Id)
+            .Skip(Paging.Offset(page, pageSize))
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return new PagedList<Appointment>(items, page, pageSize, totalCount);
     }
 
     public void Add(Appointment appointment) => db.Appointments.Add(appointment);

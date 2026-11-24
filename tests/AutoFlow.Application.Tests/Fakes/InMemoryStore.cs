@@ -275,6 +275,28 @@ public sealed class InMemoryStore
                 .ThenBy(a => a.Id),
         ]);
 
+    /// <summary>Same filters and ordering as the PostgreSQL repository.</summary>
+    Task<PagedList<Appointment>> IAppointmentRepository.ListByVehicleAsync(
+        Guid vehicleId,
+        AppointmentStatus? status,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken)
+    {
+        var matching = _appointments.Values
+            .Where(a => a.VehicleId == vehicleId)
+            .Where(a => status is null || a.Status == status)
+            .OrderByDescending(a => a.Slot.Start)
+            .ThenBy(a => a.Id)
+            .ToList();
+
+        return Task.FromResult(new PagedList<Appointment>(
+            [.. matching.Skip(Paging.Offset(page, pageSize)).Take(pageSize)],
+            page,
+            pageSize,
+            matching.Count));
+    }
+
     public void Add(Appointment appointment) => _pendingAppointments.Add(appointment);
 
     Task<Invoice?> IInvoiceRepository.GetByIdAsync(Guid id, CancellationToken cancellationToken) =>
