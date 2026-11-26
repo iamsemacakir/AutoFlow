@@ -73,7 +73,7 @@ internal static class InvoiceEndpoints
             .WithName("ListInvoices")
             .RequireAuthorization(Policies.FrontDesk)
             .ProducesAuthProblems()
-            .WithSummary("Lists invoices page by page, newest number first, optionally by status and customer.")
+            .WithSummary("Lists invoices page by page, newest number first, optionally by status, customer and whether they are overdue.")
             .Produces<PagedList<InvoiceDetails>>()
             .ProducesProblem(StatusCodes.Status400BadRequest);
 
@@ -139,13 +139,14 @@ internal static class InvoiceEndpoints
     private static async Task<IResult> ListInvoices(
         string? status,
         Guid? customerId,
+        bool? overdue,
         int? page,
         int? pageSize,
         ListInvoicesHandler handler,
         CancellationToken cancellationToken)
     {
         var result = await handler.HandleAsync(
-            new ListInvoicesQuery(status, customerId, Page: page ?? 1, PageSize: pageSize ?? Paging.DefaultPageSize),
+            new ListInvoicesQuery(status, customerId, overdue, page ?? 1, pageSize ?? Paging.DefaultPageSize),
             cancellationToken);
 
         return result.Match(value => Results.Ok(value), error => error.ToProblem());

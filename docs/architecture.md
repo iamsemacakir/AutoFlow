@@ -256,7 +256,8 @@ authentication. Business rules do not live here.
   Invoices are issued at `POST /api/work-orders/{id}/invoice` (singular:
   one per work order) and addressed at `/api/invoices/{id}` afterwards;
   payments are added at `/payments` and answer with the whole invoice, and
-  `/pdf` downloads the document. `InvoicingSettings` (VAT rate, payment
+  `/pdf` downloads the document; `GET /api/invoices?overdue=true` is the
+  list of invoices to chase. `InvoicingSettings` (VAT rate, payment
   term, the workshop's name and address) is bound from the `Invoicing`
   configuration section and validated at startup.
 - Request records implement `IValidatableRequest` and check their shape

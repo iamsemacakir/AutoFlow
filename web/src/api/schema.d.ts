@@ -496,7 +496,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Lists invoices page by page, newest number first, optionally by status and customer. */
+        /** Lists invoices page by page, newest number first, optionally by status, customer and whether they are overdue. */
         get: operations["ListInvoices"];
         put?: never;
         post?: never;
@@ -3659,6 +3659,7 @@ export interface operations {
             query?: {
                 status?: string;
                 customerId?: string;
+                overdue?: boolean;
                 page?: number;
                 pageSize?: number;
             };

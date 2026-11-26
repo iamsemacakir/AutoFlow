@@ -144,5 +144,5 @@ chase meant paging through every invoice; the front desk needs the dunning
 list on its own.
 
 - [x] Use case and query: list invoices by whether they are overdue (unpaid after the due date, judged by today's date), combinable with status and customer
-- [ ] `GET /api/invoices?overdue=true|false` (front desk; pinned in the OpenAPI contract and the web client's types)
+- [x] `GET /api/invoices?overdue=true|false` (front desk; pinned in the OpenAPI contract and the web client's types)
 - [ ] Web client: an "Overdue" filter on the invoices page, kept in the address with paging

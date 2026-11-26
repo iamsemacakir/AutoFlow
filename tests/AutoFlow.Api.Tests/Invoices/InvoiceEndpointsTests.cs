@@ -5,6 +5,10 @@ using AutoFlow.Application.Common;
 using AutoFlow.Application.Invoices;
 using AutoFlow.Application.Vehicles;
 using AutoFlow.Application.WorkOrders;
+using AutoFlow.Domain.Users;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using static AutoFlow.Api.Tests.ApiTestHelpers;
 
 namespace AutoFlow.Api.Tests.Invoices;
@@ -12,12 +16,14 @@ namespace AutoFlow.Api.Tests.Invoices;
 [Collection(ApiDatabaseDefinition.Name)]
 public sealed class InvoiceEndpointsTests : IDisposable
 {
+    private readonly ApiDatabaseFixture _api;
     private readonly HttpClient _client;
 
     public InvoiceEndpointsTests(ApiDatabaseFixture api)
     {
         ArgumentNullException.ThrowIfNull(api);
 
+        _api = api;
         _client = api.CreateClient();
     }
 
@@ -206,9 +212,43 @@ public sealed class InvoiceEndpointsTests : IDisposable
         Assert.Equal(older.Id, Assert.Single(paid!.Items).Id);
     }
 
+    [Fact]
+    public async Task List_by_overdue_keeps_unpaid_invoices_once_their_due_date_has_passed()
+    {
+        var clock = new ShiftedTimeProvider();
+        using var factory = _api.Factory.WithWebHostBuilder(builder => builder.ConfigureTestServices(services =>
+        {
+            services.RemoveAll<TimeProvider>();
+            services.AddSingleton<TimeProvider>(clock);
+        }));
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = _api.AuthorizationFor(UserRole.Owner);
+        var owner = await client.CreateCustomerAsync("Anna", "Schmidt");
+        var vehicle = await client.RegisterVehicleAsync(owner.Id);
+        var open = await client.IssueInvoiceAsync((await client.CompleteWorkOrderAsync(vehicle.Id)).Id);
+        var paid = await client.IssueInvoiceAsync((await client.CompleteWorkOrderAsync(vehicle.Id)).Id);
+        (await client.PostAsJsonAsync(
+            Url($"/api/invoices/{paid.Id}/payments"),
+            new { amount = paid.GrossTotal, method = "Card" })).Dispose();
+        var url = $"/api/invoices?customerId={owner.Id}&overdue=";
+
+        var notYet = await client.GetFromJsonAsync<PagedList<InvoiceDetails>>(Url(url + "true"));
+        // The payment term is 14 days; 15 days later the unpaid invoice is overdue.
+        clock.Shift = TimeSpan.FromDays(15);
+        var overdue = await client.GetFromJsonAsync<PagedList<InvoiceDetails>>(Url(url + "true"));
+        var notOverdue = await client.GetFromJsonAsync<PagedList<InvoiceDetails>>(Url(url + "false"));
+
+        Assert.Equal(0, notYet!.TotalCount);
+        var chased = Assert.Single(overdue!.Items);
+        Assert.Equal(open.Id, chased.Id);
+        Assert.True(chased.IsOverdue);
+        Assert.Equal(paid.Id, Assert.Single(notOverdue!.Items).Id);
+    }
+
     [Theory]
     [InlineData("/api/invoices?status=Overdue", "invoice.unknown_status")]
     [InlineData("/api/invoices?pageSize=101", "paging.invalid_page_size")]
+    [InlineData("/api/invoices?overdue=maybe", "request.malformed")]
     public async Task List_with_invalid_filters_returns_400(string url, string code)
     {
         using var response = await _client.GetAsync(Url(url));

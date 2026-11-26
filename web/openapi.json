@@ -3284,7 +3284,7 @@
         "tags": [
           "Invoices"
         ],
-        "summary": "Lists invoices page by page, newest number first, optionally by status and customer.",
+        "summary": "Lists invoices page by page, newest number first, optionally by status, customer and whether they are overdue.",
         "operationId": "ListInvoices",
         "parameters": [
           {
@@ -3300,6 +3300,13 @@
             "schema": {
               "type": "string",
               "format": "uuid"
+            }
+          },
+          {
+            "name": "overdue",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
             }
           },
           {

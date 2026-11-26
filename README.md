@@ -379,7 +379,7 @@ curl -s localhost:5080/api/appointments/<appointment-id>/check-in -H 'Content-Ty
 | --- | --- | --- |
 | `POST /api/work-orders/{workOrderId}/invoice` | Bill a completed work order: next number of the year, configured VAT rate and payment term; the work order becomes `Invoiced` | 201 + `Location`, 404, 409, 422 |
 | `GET /api/work-orders/{workOrderId}/invoice` | The invoice of a work order (`invoice.not_issued` if there is none yet) | 200, 404 |
-| `GET /api/invoices?status=&customerId=&page=1&pageSize=20` | Invoices, newest number first; `status` is `Issued`, `PartiallyPaid` or `Paid` | 200, 400 |
+| `GET /api/invoices?status=&customerId=&overdue=&page=1&pageSize=20` | Invoices, newest number first; `status` is `Issued`, `PartiallyPaid` or `Paid`; `overdue=true` keeps those with money owed after the due date, `false` the others | 200, 400 |
 | `GET /api/invoices/{id}` | One invoice with lines, totals, payments, balance and `isOverdue` | 200, 404 |
 | `GET /api/invoices/{id}/pdf` | Download the invoice as `invoice-2026-00042.pdf` | 200, 404 |
 | `POST /api/invoices/{id}/payments` | Record money received (`amount`, `method`: `Cash`/`Card`/`BankTransfer`, `receivedAt?`) | 200, 400, 404, 409, 412, 422 |
