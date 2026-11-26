@@ -6,15 +6,34 @@ import { formatDate, formatMoney } from "../lib/format";
 
 const statuses = ["", "Issued", "PartiallyPaid", "Paid"] as const;
 
+/** The address of one view of the list: only the filters that are set, and the page beyond the first. */
+function viewParams(status: string, overdue: boolean, page = 1): Record<string, string> {
+  return {
+    ...(status ? { status } : {}),
+    ...(overdue ? { overdue: "true" } : {}),
+    ...(page > 1 ? { page: String(page) } : {}),
+  };
+}
+
+/**
+ * Every invoice, newest number first, by status and, for the money to
+ * chase, only the overdue ones. Filters and page live in the address, so
+ * the dunning list can be bookmarked.
+ */
 export function InvoicesPage() {
   const [params, setParams] = useSearchParams();
   const status = params.get("status") ?? "";
+  const overdue = params.get("overdue") === "true";
   const page = Number(params.get("page") ?? "1");
 
   const invoices = useQuery({
-    queryKey: ["invoices", status, page],
+    queryKey: ["invoices", status, overdue, page],
     queryFn: async () =>
-      unwrap(await api.GET("/api/invoices", { params: { query: { status: status || undefined, page, pageSize: 20 } } })),
+      unwrap(
+        await api.GET("/api/invoices", {
+          params: { query: { status: status || undefined, overdue: overdue || undefined, page, pageSize: 20 } },
+        }),
+      ),
     placeholderData: keepPreviousData,
   });
 
@@ -27,18 +46,29 @@ export function InvoicesPage() {
             key={value || "all"}
             type="button"
             className={value === status ? "selected" : undefined}
-            onClick={() => setParams(value ? { status: value } : {})}
+            aria-pressed={value === status}
+            onClick={() => setParams(viewParams(value, overdue))}
           >
             {value ? value.replace("PartiallyPaid", "Partially paid") : "All"}
           </button>
         ))}
+      </div>
+      <div className="toolbar" role="group" aria-label="Filter by due date">
+        <button
+          type="button"
+          className={overdue ? "selected" : undefined}
+          aria-pressed={overdue}
+          onClick={() => setParams(viewParams(status, !overdue))}
+        >
+          Only overdue
+        </button>
       </div>
       <ErrorMessage error={invoices.error} />
       {invoices.isPending && <Loading />}
       {invoices.data && (
         <Card>
           {invoices.data.items.length === 0 ? (
-            <Empty>No invoices.</Empty>
+            <Empty>{overdue ? "No overdue invoices." : "No invoices."}</Empty>
           ) : (
             <table>
               <thead>
@@ -74,7 +104,7 @@ export function InvoicesPage() {
           )}
           {(invoices.data.totalPages ?? 1) > 1 && (
             <div className="pager">
-              <button type="button" disabled={page <= 1} onClick={() => setParams({ status, page: String(page - 1) })}>
+              <button type="button" disabled={page <= 1} onClick={() => setParams(viewParams(status, overdue, page - 1))}>
                 Previous
               </button>
               <span className="muted">
@@ -83,7 +113,7 @@ export function InvoicesPage() {
               <button
                 type="button"
                 disabled={page >= (invoices.data.totalPages ?? 1)}
-                onClick={() => setParams({ status, page: String(page + 1) })}
+                onClick={() => setParams(viewParams(status, overdue, page + 1))}
               >
                 Next
               </button>

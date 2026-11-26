@@ -145,4 +145,4 @@ list on its own.
 
 - [x] Use case and query: list invoices by whether they are overdue (unpaid after the due date, judged by today's date), combinable with status and customer
 - [x] `GET /api/invoices?overdue=true|false` (front desk; pinned in the OpenAPI contract and the web client's types)
-- [ ] Web client: an "Overdue" filter on the invoices page, kept in the address with paging
+- [x] Web client: an "Only overdue" filter on the invoices page, combinable with the status filter and kept in the address with paging; page tests

@@ -132,6 +132,11 @@ with a status filter kept in the address (`/work-orders?status=Completed`),
 so the front desk sees at a glance what is finished and waiting for an
 invoice and mechanics see what is approved and ready to start.
 
+The invoices page filters by status and, with "Only overdue", narrows the
+list to the invoices with money owed after their due date; both filters
+stay in the address (`/invoices?status=PartiallyPaid&overdue=true`), so the
+dunning list is one bookmark.
+
 A vehicle's page shows its appointments next to its service history,
 latest first and in every status, with links to the day on the schedule
 or to the work order a check-in opened, so the counter can answer "when is

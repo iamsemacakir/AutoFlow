@@ -45,7 +45,7 @@ test("the front desk plans the day and follows a car from check-in to invoice", 
 
   // The overdue invoice is paid at the counter, and its PDF downloads.
   await page.getByRole("link", { name: "Invoices" }).click();
-  await expect(page.getByText("overdue")).toBeVisible();
+  await expect(page.getByRole("row", { name: /overdue/ })).toBeVisible();
   await capture(page, "invoices");
   await page.getByRole("row", { name: /overdue/ }).getByRole("link").click();
   const download = page.waitForEvent("download");
