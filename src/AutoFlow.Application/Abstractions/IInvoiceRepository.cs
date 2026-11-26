@@ -28,17 +28,30 @@ public interface IInvoiceRepository
     Task<int> GetLastSequenceAsync(int year, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// One page of invoices, newest number first, optionally only those in
-    /// <paramref name="status"/> and/or of <paramref name="customerId"/>.
-    /// Lines and payments come with each invoice. The returned entities are
-    /// read-only snapshots and are not tracked.
+    /// One page of invoices, newest number first, matching
+    /// <paramref name="filter"/>. Lines and payments come with each invoice.
+    /// The returned entities are read-only snapshots and are not tracked.
     /// </summary>
     Task<PagedList<Invoice>> ListAsync(
-        InvoiceStatus? status,
-        Guid? customerId,
+        InvoiceListFilter filter,
         int page,
         int pageSize,
         CancellationToken cancellationToken = default);
 
     void Add(Invoice invoice);
 }
+
+/// <summary>Which invoices <see cref="IInvoiceRepository.ListAsync"/> returns; a null criterion matches every invoice.</summary>
+/// <param name="Status">Only invoices in this status.</param>
+/// <param name="CustomerId">Only invoices of this customer.</param>
+/// <param name="Overdue">
+/// <c>true</c>: only invoices not yet paid whose due date is before
+/// <paramref name="Today"/>; <c>false</c>: only the others. The same rule as
+/// <see cref="Invoice.IsOverdue"/>.
+/// </param>
+/// <param name="Today">The day <paramref name="Overdue"/> is judged on.</param>
+public sealed record InvoiceListFilter(
+    InvoiceStatus? Status = null,
+    Guid? CustomerId = null,
+    bool? Overdue = null,
+    DateOnly Today = default);

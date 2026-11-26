@@ -310,15 +310,15 @@ public sealed class InMemoryStore
 
     /// <summary>Same filter and ordering as the PostgreSQL repository.</summary>
     public Task<PagedList<Invoice>> ListAsync(
-        InvoiceStatus? status,
-        Guid? customerId,
+        InvoiceListFilter filter,
         int page,
         int pageSize,
         CancellationToken cancellationToken = default)
     {
         var matching = _invoices.Values
-            .Where(i => status is null || i.Status == status)
-            .Where(i => customerId is null || i.CustomerId == customerId)
+            .Where(i => filter.Status is null || i.Status == filter.Status)
+            .Where(i => filter.CustomerId is null || i.CustomerId == filter.CustomerId)
+            .Where(i => filter.Overdue is null || i.IsOverdue(filter.Today) == filter.Overdue)
             .OrderByDescending(i => i.Year)
             .ThenByDescending(i => i.Sequence)
             .ToList();

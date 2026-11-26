@@ -253,6 +253,31 @@ public class InvoiceHandlerTests
     }
 
     [Fact]
+    public async Task List_by_overdue_judges_unpaid_invoices_by_todays_date()
+    {
+        // Issued at Now with a 14-day term: due on Now + 14 days, overdue from the day after.
+        var open = SeedInvoice(sequence: 1);
+        var partlyPaid = SeedInvoice(sequence: 2);
+        partlyPaid.RecordPayment(100m, PaymentMethod.Cash, Now);
+        var paid = SeedInvoice(sequence: 3);
+        paid.RecordPayment(paid.Balance, PaymentMethod.Card, Now);
+        var recent = SeedInvoice(sequence: 4, issuedAt: Now.AddDays(10));
+        var onDueDate = new ListInvoicesHandler(_store, new FixedTimeProvider(Now.AddDays(14)));
+        var dayAfter = new ListInvoicesHandler(_store, new FixedTimeProvider(Now.AddDays(15)));
+
+        var noneYet = await onDueDate.HandleAsync(new ListInvoicesQuery(Overdue: true));
+        var overdue = await dayAfter.HandleAsync(new ListInvoicesQuery(Overdue: true));
+        var notOverdue = await dayAfter.HandleAsync(new ListInvoicesQuery(Overdue: false));
+        var overduePartlyPaid = await dayAfter.HandleAsync(new ListInvoicesQuery(Status: "PartiallyPaid", Overdue: true));
+
+        Assert.Equal(0, noneYet.Value.TotalCount);
+        Assert.Equal([partlyPaid.Id, open.Id], overdue.Value.Items.Select(i => i.Id).ToArray());
+        Assert.All(overdue.Value.Items, i => Assert.True(i.IsOverdue));
+        Assert.Equal([recent.Id, paid.Id], notOverdue.Value.Items.Select(i => i.Id).ToArray());
+        Assert.Equal(partlyPaid.Id, Assert.Single(overduePartlyPaid.Value.Items).Id);
+    }
+
+    [Fact]
     public async Task List_with_an_unknown_status_or_invalid_paging_is_a_validation_error()
     {
         var handler = new ListInvoicesHandler(_store, new FixedTimeProvider());

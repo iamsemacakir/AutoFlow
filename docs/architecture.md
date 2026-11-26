@@ -124,8 +124,9 @@ See [ADR 0002](adr/0002-use-case-handlers-and-result-type.md).
   `InvoiceDetails`, which also says whether the invoice is overdue at the
   time of the request. `GetInvoiceHandler`, `GetWorkOrderInvoiceHandler`
   (`invoice.not_issued` when the work order has none yet) and
-  `ListInvoicesHandler` (paged, newest number first, optional status and
-  customer filters) read them.
+  `ListInvoicesHandler` (paged, newest number first, optional status,
+  customer and overdue filters; overdue is judged by today's UTC date with
+  the same rule as `Invoice.IsOverdue`) read them.
 - `SignInHandler` checks a password through the `IPasswordHasher` port and
   issues a token through `IAccessTokenIssuer`; every failure is the same
   `auth.invalid_credentials` (`ErrorKind.Unauthorized`, 401). Owners manage
@@ -191,6 +192,8 @@ See [ADR 0003](adr/0003-ef-core-postgresql-persistence.md).
   of the year plus one, and the index rejects a number taken twice, so
   numbers have no gaps. A second unique index allows one invoice per work
   order. See [ADR 0019](adr/0019-invoice-persistence-and-numbering.md).
+  `InvoiceRepository.ListAsync` takes an `InvoiceListFilter`; its overdue
+  criterion is translated to `status <> 'Paid' AND due_date < today`.
 - `PdfInvoiceRenderer` implements the application's
   `IInvoiceDocumentRenderer` port by writing PDF directly (standard fonts,
   no library, no native dependency); `ExportInvoiceHandler` uses it. See

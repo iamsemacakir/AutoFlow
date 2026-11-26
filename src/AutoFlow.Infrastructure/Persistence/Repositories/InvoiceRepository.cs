@@ -20,23 +20,33 @@ internal sealed class InvoiceRepository(AutoFlowDbContext db) : IInvoiceReposito
             .MaxAsync(i => (int?)i.Sequence, cancellationToken) ?? 0;
 
     public async Task<PagedList<Invoice>> ListAsync(
-        InvoiceStatus? status,
-        Guid? customerId,
+        InvoiceListFilter filter,
         int page,
         int pageSize,
         CancellationToken cancellationToken = default)
     {
         IQueryable<Invoice> matching = db.Invoices.AsNoTracking();
 
-        if (status is { } wantedStatus)
+        ArgumentNullException.ThrowIfNull(filter);
+
+        if (filter.Status is { } wantedStatus)
         {
             matching = matching.Where(i => i.Status == wantedStatus);
         }
 
-        if (customerId is { } wantedCustomer)
+        if (filter.CustomerId is { } wantedCustomer)
         {
             matching = matching.Where(i => i.CustomerId == wantedCustomer);
         }
+
+        // Same rule as Invoice.IsOverdue: money still owed after the due date.
+        var today = filter.Today;
+        matching = filter.Overdue switch
+        {
+            true => matching.Where(i => i.Status != InvoiceStatus.Paid && i.DueDate < today),
+            false => matching.Where(i => i.Status == InvoiceStatus.Paid || i.DueDate >= today),
+            null => matching,
+        };
 
         var totalCount = await matching.CountAsync(cancellationToken);
         var items = await matching

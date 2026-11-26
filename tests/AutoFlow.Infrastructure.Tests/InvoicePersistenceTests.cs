@@ -196,10 +196,10 @@ public class InvoicePersistenceTests(PostgresFixture postgres)
         await using var db = postgres.CreateContext();
         var repository = new InvoiceRepository(db);
 
-        var all = await repository.ListAsync(null, customerId, page: 1, pageSize: 2);
-        var secondPage = await repository.ListAsync(null, customerId, page: 2, pageSize: 2);
-        var open = await repository.ListAsync(InvoiceStatus.Issued, customerId, page: 1, pageSize: 10);
-        var settled = await repository.ListAsync(InvoiceStatus.Paid, customerId, page: 1, pageSize: 10);
+        var all = await repository.ListAsync(new(CustomerId: customerId), page: 1, pageSize: 2);
+        var secondPage = await repository.ListAsync(new(CustomerId: customerId), page: 2, pageSize: 2);
+        var open = await repository.ListAsync(new(InvoiceStatus.Issued, customerId), page: 1, pageSize: 10);
+        var settled = await repository.ListAsync(new(InvoiceStatus.Paid, customerId), page: 1, pageSize: 10);
 
         Assert.Equal(3, all.TotalCount);
         Assert.Equal([open3.Id, paid.Id], all.Items.Select(i => i.Id).ToArray());
@@ -208,6 +208,41 @@ public class InvoicePersistenceTests(PostgresFixture postgres)
         Assert.Equal(paid.Id, Assert.Single(settled.Items).Id);
         Assert.Equal(2, all.Items[0].Lines.Count);
         Assert.Empty(db.ChangeTracker.Entries());
+    }
+
+    [Fact]
+    public async Task ListAsync_by_overdue_keeps_unpaid_invoices_past_their_due_date()
+    {
+        // Every seeded invoice is issued on 1 June with a 14-day term: due on 15 June.
+        var year = TestData.UniqueInvoiceYear();
+        var first = await SeedCompletedWorkOrderAsync();
+        var customerId = first.CustomerId;
+        var open = await SeedInvoiceAsync(year, 1, first);
+        var partlyPaid = await SeedInvoiceAsync(year, 2, await SeedCompletedWorkOrderAsync(customerId));
+        var paid = await SeedInvoiceAsync(year, 3, await SeedCompletedWorkOrderAsync(customerId));
+        await using (var payDb = postgres.CreateContext())
+        {
+            var toPayInPart = await payDb.Invoices.SingleAsync(i => i.Id == partlyPaid.Id);
+            toPayInPart.RecordPayment(100m, PaymentMethod.Cash, toPayInPart.IssuedAt);
+            var toPay = await payDb.Invoices.SingleAsync(i => i.Id == paid.Id);
+            toPay.RecordPayment(toPay.Balance, PaymentMethod.Card, toPay.IssuedAt);
+            await payDb.SaveChangesAsync();
+        }
+
+        await using var db = postgres.CreateContext();
+        var repository = new InvoiceRepository(db);
+        var dueDate = new DateOnly(year, 6, 15);
+
+        var onDueDate = await repository.ListAsync(new(CustomerId: customerId, Overdue: true, Today: dueDate), page: 1, pageSize: 10);
+        var overdue = await repository.ListAsync(new(CustomerId: customerId, Overdue: true, Today: dueDate.AddDays(1)), page: 1, pageSize: 10);
+        var notOverdue = await repository.ListAsync(new(CustomerId: customerId, Overdue: false, Today: dueDate.AddDays(1)), page: 1, pageSize: 10);
+        var overdueIssued = await repository.ListAsync(
+            new(InvoiceStatus.Issued, customerId, Overdue: true, Today: dueDate.AddDays(1)), page: 1, pageSize: 10);
+
+        Assert.Equal(0, onDueDate.TotalCount);
+        Assert.Equal([partlyPaid.Id, open.Id], overdue.Items.Select(i => i.Id).ToArray());
+        Assert.Equal(paid.Id, Assert.Single(notOverdue.Items).Id);
+        Assert.Equal(open.Id, Assert.Single(overdueIssued.Items).Id);
     }
 
     private async Task<Invoice> SeedInvoiceAsync(int? year = null, int sequence = 1, WorkOrder? workOrder = null)

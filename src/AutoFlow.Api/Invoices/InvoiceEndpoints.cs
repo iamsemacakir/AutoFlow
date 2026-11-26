@@ -145,7 +145,7 @@ internal static class InvoiceEndpoints
         CancellationToken cancellationToken)
     {
         var result = await handler.HandleAsync(
-            new ListInvoicesQuery(status, customerId, page ?? 1, pageSize ?? Paging.DefaultPageSize),
+            new ListInvoicesQuery(status, customerId, Page: page ?? 1, PageSize: pageSize ?? Paging.DefaultPageSize),
             cancellationToken);
 
         return result.Match(value => Results.Ok(value), error => error.ToProblem());

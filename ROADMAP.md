@@ -136,3 +136,13 @@ answer it next to the work order history.
 - [x] Use case and query: a vehicle's appointments, latest start first, by status, including those booked by earlier owners
 - [x] `GET /api/vehicles/{vehicleId}/appointments` with `status` and paging (staff; pinned in the OpenAPI contract and the web client's types)
 - [x] Web client: the vehicle page lists the vehicle's appointments for every role (bay, purpose, status; links to the day on the schedule or to the work order of the check-in)
+
+## Follow-ups — overdue invoices
+
+Each invoice already says whether it is overdue, but finding the ones to
+chase meant paging through every invoice; the front desk needs the dunning
+list on its own.
+
+- [x] Use case and query: list invoices by whether they are overdue (unpaid after the due date, judged by today's date), combinable with status and customer
+- [ ] `GET /api/invoices?overdue=true|false` (front desk; pinned in the OpenAPI contract and the web client's types)
+- [ ] Web client: an "Overdue" filter on the invoices page, kept in the address with paging
