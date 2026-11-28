@@ -1,4 +1,4 @@
-import { screen } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Route, Routes } from "react-router-dom";
 import { json, mockApi, pathOf } from "../test/http";
@@ -24,6 +24,9 @@ function renderCustomer(role: "Owner" | "ServiceAdvisor" | "Mechanic") {
   );
 }
 
+/** An empty page of a list, as the API answers when nothing matches. */
+const emptyPage = { items: [], page: 1, pageSize: 50, totalCount: 0, totalPages: 0 };
+
 /** Answers like the API for one customer without vehicles; `onDelete` answers the delete request. */
 function customerApi(onDelete: () => Response) {
   return mockApi((request) => {
@@ -33,6 +36,9 @@ function customerApi(onDelete: () => Response) {
     }
     if (path === "/api/customers/customer-1/vehicles") {
       return json([]);
+    }
+    if (path.startsWith("/api/work-orders?") || path.startsWith("/api/invoices?")) {
+      return json(emptyPage);
     }
     return json(customer);
   });
@@ -102,6 +108,9 @@ describe("CustomerPage", () => {
       if (path === `/api/customers/${id}/vehicles`) {
         return json([]);
       }
+      if (path.startsWith("/api/work-orders?") || path.startsWith("/api/invoices?")) {
+        return json(emptyPage);
+      }
       if (request.method === "PUT") {
         saves.push(request.headers.get("If-Match"));
         if (request.headers.get("If-Match") !== `"${version}"`) {
@@ -131,5 +140,95 @@ describe("CustomerPage", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Close" }));
     expect(await screen.findByText("+49 30 2222")).toBeInTheDocument();
+  });
+
+  describe("work orders", () => {
+    const golf = {
+      id: "vehicle-1",
+      customerId: "customer-1",
+      vin: "WVWZZZ1KZAW000001",
+      licensePlate: "B-MW 1",
+      make: "VW",
+      model: "Golf",
+      modelYear: 2019,
+      mileageKm: 81000,
+      createdAt: "2026-11-01T08:00:00Z",
+    };
+    const workOrder = (id: string, vehicleId: string, status: string, total: number) => ({
+      id,
+      vehicleId,
+      customerId: "customer-1",
+      complaint: `Complaint ${id}`,
+      mileageKmAtIntake: 80000,
+      status,
+      lines: [],
+      labourTotal: total,
+      partsTotal: 0,
+      total,
+      approvedTotal: null,
+      createdAt: "2026-11-20T08:00:00Z",
+      approvedAt: null,
+      startedAt: null,
+      completedAt: null,
+      invoicedAt: null,
+      cancelledAt: null,
+    });
+
+    function workOrdersApi(items: unknown[], totalCount = items.length) {
+      return mockApi((request) => {
+        const path = pathOf(request);
+        if (path === "/api/customers/customer-1/vehicles") {
+          return json([golf]);
+        }
+        if (path.startsWith("/api/work-orders?")) {
+          return json({ items, page: 1, pageSize: 50, totalCount, totalPages: Math.ceil(totalCount / 50) });
+        }
+        if (path.startsWith("/api/invoices?")) {
+          return json(emptyPage);
+        }
+        return json(customer);
+      });
+    }
+
+    it("lists the customer's work orders with their vehicle, also for cars sold since", async () => {
+      const fetchMock = workOrdersApi([
+        workOrder("brakes", "vehicle-1", "InProgress", 240),
+        workOrder("clutch", "vehicle-sold", "Invoiced", 980.5),
+      ]);
+      renderCustomer("Mechanic");
+
+      const heading = await screen.findByRole("heading", { name: "Work orders" });
+      const card = heading.closest("section") as HTMLElement;
+      const rows = await within(card).findAllByRole("row");
+      expect(rows).toHaveLength(3);
+      const [, brakes, clutch] = rows as [HTMLElement, HTMLElement, HTMLElement];
+
+      expect(within(brakes).getByRole("link", { name: "Complaint brakes" })).toHaveAttribute("href", "/work-orders/brakes");
+      expect(within(brakes).getByRole("link", { name: "VW Golf (B-MW 1)" })).toHaveAttribute("href", "/vehicles/vehicle-1");
+      expect(within(brakes).getByText("In progress")).toBeInTheDocument();
+      expect(within(clutch).getByRole("link", { name: "Earlier vehicle" })).toHaveAttribute("href", "/vehicles/vehicle-sold");
+      expect(within(clutch).getByText("Invoiced")).toBeInTheDocument();
+      expect(screen.queryByText(/The latest/)).not.toBeInTheDocument();
+
+      const request = fetchMock.mock.calls
+        .map(([sent]) => pathOf(sent as Request))
+        .find((path) => path.startsWith("/api/work-orders?"));
+      expect(request).toContain("customerId=customer-1");
+      expect(request).toContain("pageSize=50");
+    });
+
+    it("says how many work orders are left out when there are more than one page", async () => {
+      workOrdersApi([workOrder("brakes", "vehicle-1", "Draft", 0)], 51);
+      renderCustomer("ServiceAdvisor");
+
+      expect(await screen.findByText("The latest 1 of 51 work orders.")).toBeInTheDocument();
+    });
+
+    it("says when the customer has no work orders yet", async () => {
+      workOrdersApi([]);
+      renderCustomer("Owner");
+
+      expect(await screen.findByText("No work orders yet.")).toBeInTheDocument();
+    });
   });
 });

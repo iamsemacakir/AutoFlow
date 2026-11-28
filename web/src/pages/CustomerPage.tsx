@@ -4,8 +4,8 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, ifMatch, isStale, unwrap } from "../api/client";
 import type { CustomerDetails } from "../api/types";
 import { FRONT_DESK, useAuth } from "../auth/AuthContext";
-import { Card, Empty, ErrorMessage, Field, Loading, PageHeader } from "../components/ui";
-import { formatDate, formatNumber } from "../lib/format";
+import { Card, Empty, ErrorMessage, Field, Loading, PageHeader, StatusBadge } from "../components/ui";
+import { formatDate, formatDateTime, formatMoney, formatNumber } from "../lib/format";
 
 export function CustomerPage() {
   const { id = "" } = useParams();
@@ -102,7 +102,70 @@ export function CustomerPage() {
           )}
         </Card>
       </div>
+      <WorkOrders customerId={id} vehicles={vehicles.data ?? []} />
     </>
+  );
+}
+
+type OwnedVehicle = { id: string; make: string; model: string; licensePlate: string };
+
+/**
+ * Everything the customer commissioned, newest first and in every status:
+ * what waits for their approval, what is in the workshop, what is done. Work
+ * orders for cars they have since sold stay listed under the customer who
+ * ordered them; those link to the vehicle without naming it.
+ */
+function WorkOrders({ customerId, vehicles }: { customerId: string; vehicles: OwnedVehicle[] }) {
+  const workOrders = useQuery({
+    queryKey: ["customer-work-orders", customerId],
+    queryFn: async () =>
+      unwrap(await api.GET("/api/work-orders", { params: { query: { customerId, page: 1, pageSize: 50 } } })),
+  });
+  const vehicleName = (vehicleId: string) => {
+    const vehicle = vehicles.find((owned) => owned.id === vehicleId);
+    return vehicle ? `${vehicle.make} ${vehicle.model} (${vehicle.licensePlate})` : "Earlier vehicle";
+  };
+
+  return (
+    <Card title="Work orders">
+      <ErrorMessage error={workOrders.error} />
+      {workOrders.data?.items.length === 0 && <Empty>No work orders yet.</Empty>}
+      {workOrders.data && workOrders.data.items.length > 0 && (
+        <table>
+          <thead>
+            <tr>
+              <th>Opened</th>
+              <th>Complaint</th>
+              <th>Vehicle</th>
+              <th>Status</th>
+              <th className="number">Total (net)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {workOrders.data.items.map((workOrder) => (
+              <tr key={workOrder.id}>
+                <td>{formatDateTime(workOrder.createdAt)}</td>
+                <td>
+                  <Link to={`/work-orders/${workOrder.id}`}>{workOrder.complaint}</Link>
+                </td>
+                <td>
+                  <Link to={`/vehicles/${workOrder.vehicleId}`}>{vehicleName(workOrder.vehicleId)}</Link>
+                </td>
+                <td>
+                  <StatusBadge status={workOrder.status} />
+                </td>
+                <td className="number">{formatMoney(workOrder.total)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      {workOrders.data && workOrders.data.totalCount > workOrders.data.items.length && (
+        <p className="muted">
+          The latest {workOrders.data.items.length} of {workOrders.data.totalCount} work orders.
+        </p>
+      )}
+    </Card>
   );
 }
 

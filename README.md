@@ -142,6 +142,11 @@ latest first and in every status, with links to the day on the schedule
 or to the work order a check-in opened, so the counter can answer "when is
 this car booked in?" without paging through the schedule.
 
+A customer's page lists the work orders they commissioned, newest first
+and in every status, next to the cars they own; work orders for cars they
+have sold since stay on their page, so their whole history with the
+workshop is in one place.
+
 Changing your password on the account page ends every session signed in
 with the old one; the page signs this tab in again with the new password,
 so only the other sessions have to sign in again.
