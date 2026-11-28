@@ -145,7 +145,9 @@ this car booked in?" without paging through the schedule.
 A customer's page lists the work orders they commissioned, newest first
 and in every status, next to the cars they own; work orders for cars they
 have sold since stay on their page, so their whole history with the
-workshop is in one place.
+workshop is in one place. For the front desk it also lists their invoices
+with due dates and balances and says what they still owe and how much of
+it is overdue.
 
 Changing your password on the account page ends every session signed in
 with the old one; the page signs this tab in again with the new password,

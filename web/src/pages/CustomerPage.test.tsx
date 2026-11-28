@@ -2,6 +2,7 @@ import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Route, Routes } from "react-router-dom";
 import { json, mockApi, pathOf } from "../test/http";
+import { formatMoney } from "../lib/format";
 import { renderAt } from "../test/render";
 import { CustomerPage } from "./CustomerPage";
 
@@ -229,6 +230,98 @@ describe("CustomerPage", () => {
       renderCustomer("Owner");
 
       expect(await screen.findByText("No work orders yet.")).toBeInTheDocument();
+    });
+  });
+
+  describe("invoices", () => {
+    const invoice = (number: string, status: string, grossTotal: number, balance: number, isOverdue = false) => ({
+      id: `invoice-${number}`,
+      number,
+      workOrderId: `work-order-${number}`,
+      customerId: "customer-1",
+      customerName: "Mia Wagner",
+      vehicleDescription: "VW Golf (B-MW 1)",
+      status,
+      issuedAt: "2026-11-01T08:00:00Z",
+      dueDate: "2026-11-15",
+      isOverdue,
+      vatRatePercent: 19,
+      netTotal: grossTotal / 1.19,
+      vatAmount: grossTotal - grossTotal / 1.19,
+      grossTotal,
+      amountPaid: grossTotal - balance,
+      balance,
+      paidAt: balance === 0 ? "2026-11-10T08:00:00Z" : null,
+      lines: [],
+      payments: [],
+    });
+
+    function invoicesApi(items: unknown[], totalCount = items.length) {
+      return mockApi((request) => {
+        const path = pathOf(request);
+        if (path === "/api/customers/customer-1/vehicles") {
+          return json([]);
+        }
+        if (path.startsWith("/api/invoices?")) {
+          return json({ items, page: 1, pageSize: 50, totalCount, totalPages: Math.ceil(totalCount / 50) });
+        }
+        if (path.startsWith("/api/work-orders?")) {
+          return json(emptyPage);
+        }
+        return json(customer);
+      });
+    }
+
+    it("lists the customer's invoices with what they owe and how much of it is overdue", async () => {
+      const fetchMock = invoicesApi([
+        invoice("2026-0012", "PartiallyPaid", 500, 200, true),
+        invoice("2026-0009", "Issued", 119, 119),
+        invoice("2026-0003", "Paid", 300, 0),
+      ]);
+      renderCustomer("ServiceAdvisor");
+
+      const heading = await screen.findByRole("heading", { name: "Invoices" });
+      const card = heading.closest("section") as HTMLElement;
+      const rows = await within(card).findAllByRole("row");
+      expect(rows).toHaveLength(4);
+      const [, chased, open, paid] = rows as [HTMLElement, HTMLElement, HTMLElement, HTMLElement];
+
+      expect(within(chased).getByRole("link", { name: "2026-0012" })).toHaveAttribute("href", "/invoices/invoice-2026-0012");
+      expect(within(chased).getByText(/overdue/)).toBeInTheDocument();
+      expect(within(chased).getByText("Partially paid")).toBeInTheDocument();
+      expect(within(open).queryByText(/overdue/)).not.toBeInTheDocument();
+      expect(within(paid).getByText("Paid")).toBeInTheDocument();
+      expect(within(card).getByText(`Owes ${formatMoney(319)}, ${formatMoney(200)} of it overdue.`)).toBeInTheDocument();
+
+      const request = fetchMock.mock.calls
+        .map(([sent]) => pathOf(sent as Request))
+        .find((path) => path.startsWith("/api/invoices?"));
+      expect(request).toContain("customerId=customer-1");
+      expect(request).toContain("pageSize=50");
+    });
+
+    it("says when everything is paid", async () => {
+      invoicesApi([invoice("2026-0003", "Paid", 300, 0)]);
+      renderCustomer("Owner");
+
+      expect(await screen.findByText("Everything is paid.")).toBeInTheDocument();
+    });
+
+    it("gives no sum when not every invoice is on the page", async () => {
+      invoicesApi([invoice("2026-0012", "Issued", 500, 500)], 51);
+      renderCustomer("Owner");
+
+      expect(await screen.findByText("The latest 1 of 51 invoices.")).toBeInTheDocument();
+      expect(screen.queryByText(/Owes/)).not.toBeInTheDocument();
+    });
+
+    it("neither shows nor requests invoices for mechanics", async () => {
+      const fetchMock = invoicesApi([invoice("2026-0012", "Issued", 500, 500)]);
+      renderCustomer("Mechanic");
+
+      expect(await screen.findByRole("heading", { name: "Work orders" })).toBeInTheDocument();
+      expect(screen.queryByRole("heading", { name: "Invoices" })).not.toBeInTheDocument();
+      expect(fetchMock.mock.calls.some(([sent]) => pathOf(sent as Request).startsWith("/api/invoices"))).toBe(false);
     });
   });
 });

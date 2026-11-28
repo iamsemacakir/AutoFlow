@@ -103,6 +103,7 @@ export function CustomerPage() {
         </Card>
       </div>
       <WorkOrders customerId={id} vehicles={vehicles.data ?? []} />
+      {frontDesk && <Invoices customerId={id} />}
     </>
   );
 }
@@ -163,6 +164,76 @@ function WorkOrders({ customerId, vehicles }: { customerId: string; vehicles: Ow
       {workOrders.data && workOrders.data.totalCount > workOrders.data.items.length && (
         <p className="muted">
           The latest {workOrders.data.items.length} of {workOrders.data.totalCount} work orders.
+        </p>
+      )}
+    </Card>
+  );
+}
+
+/**
+ * The customer's invoices, newest number first, with what they still owe and
+ * how much of it is past due. Invoices are front-desk business, so mechanics
+ * neither see nor request them. The sum is only given when every invoice is
+ * on the page; otherwise it would quietly leave money out.
+ */
+function Invoices({ customerId }: { customerId: string }) {
+  const invoices = useQuery({
+    queryKey: ["customer-invoices", customerId],
+    queryFn: async () =>
+      unwrap(await api.GET("/api/invoices", { params: { query: { customerId, page: 1, pageSize: 50 } } })),
+  });
+  const items = invoices.data?.items ?? [];
+  const complete = invoices.data !== undefined && invoices.data.totalCount === items.length;
+  const owed = items.reduce((sum, invoice) => sum + invoice.balance, 0);
+  const overdue = items.filter((invoice) => invoice.isOverdue).reduce((sum, invoice) => sum + invoice.balance, 0);
+
+  return (
+    <Card title="Invoices">
+      <ErrorMessage error={invoices.error} />
+      {invoices.data && items.length === 0 && <Empty>No invoices yet.</Empty>}
+      {complete && items.length > 0 && (
+        <p className={overdue > 0 ? "warning" : "muted"}>
+          {owed === 0
+            ? "Everything is paid."
+            : `Owes ${formatMoney(owed)}${overdue > 0 ? `, ${formatMoney(overdue)} of it overdue` : ""}.`}
+        </p>
+      )}
+      {items.length > 0 && (
+        <table>
+          <thead>
+            <tr>
+              <th>Number</th>
+              <th>Vehicle</th>
+              <th>Due</th>
+              <th>Status</th>
+              <th className="number">Total</th>
+              <th className="number">Balance</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((invoice) => (
+              <tr key={invoice.id}>
+                <td>
+                  <Link to={`/invoices/${invoice.id}`}>{invoice.number}</Link>
+                </td>
+                <td>{invoice.vehicleDescription}</td>
+                <td className={invoice.isOverdue ? "warning" : undefined}>
+                  {formatDate(invoice.dueDate)}
+                  {invoice.isOverdue && " · overdue"}
+                </td>
+                <td>
+                  <StatusBadge status={invoice.status} />
+                </td>
+                <td className="number">{formatMoney(invoice.grossTotal)}</td>
+                <td className="number">{formatMoney(invoice.balance)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      {invoices.data && !complete && (
+        <p className="muted">
+          The latest {items.length} of {invoices.data.totalCount} invoices.
         </p>
       )}
     </Card>

@@ -42,6 +42,7 @@ test("the front desk plans the day and follows a car from check-in to invoice", 
   await expect(page.getByRole("heading", { name: "Mia Wagner" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Opel Corsa (2018)" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Exhaust rattles at idle" })).toBeVisible();
+  await expect(page.getByText(/of it overdue\./)).toBeVisible();
   await capture(page, "customer");
 
   // The overdue invoice is paid at the counter, and its PDF downloads.

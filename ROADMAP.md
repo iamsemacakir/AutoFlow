@@ -154,4 +154,4 @@ what they had commissioned or still owe; at the counter "what have we done
 for them, and is anything unpaid?" meant two other lists and a filter.
 
 - [x] Web client: the customer page lists the customer's work orders for every role, newest first (vehicle, status, net total), including those for cars sold since
-- [ ] Web client: the customer page lists the customer's invoices for the front desk (due date, overdue, balance) with the open balance owed
+- [x] Web client: the customer page lists the customer's invoices for the front desk (due date, overdue, balance) with the open balance owed
